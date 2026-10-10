@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:celechron/utils/platform_features.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -193,7 +194,7 @@ class OptionPage extends StatelessWidget {
                           ),
                           onTap: () async {
                             // Pop up a login widget from the bottom of the screen
-                            showCupertinoModalPopup(
+                            showAdaptivePopup(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return LoginForm();
@@ -506,7 +507,7 @@ class OptionPage extends StatelessWidget {
   }
 
   void _showBrightnessPicker(BuildContext context) {
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       builder: (BuildContext context) {
         return CupertinoActionSheet(

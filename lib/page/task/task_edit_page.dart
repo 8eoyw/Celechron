@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:celechron/model/task.dart';
 import 'package:celechron/utils/utils.dart';
@@ -200,7 +201,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                 '开始于 ${TimeHelper.chineseDateTime(now.startTime)}'),
                         readOnly: true,
                         onTap: () async {
-                          await showCupertinoModalPopup(
+                          await showAdaptivePopup(
                               context: context,
                               builder: (BuildContext context) {
                                 return CupertinoPageScaffold(
@@ -239,7 +240,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                               '${now.type == TaskType.deadline ? '截止于' : '结束于'} ${TimeHelper.chineseDateTime(now.endTime)}'),
                       readOnly: true,
                       onTap: () async {
-                        await showCupertinoModalPopup(
+                        await showAdaptivePopup(
                             context: context,
                             builder: (BuildContext context) {
                               return CupertinoPageScaffold(
@@ -281,7 +282,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                         title: const Text('预期用时'),
                         trailing: Text(durationToString(now.timeNeeded)),
                         onTap: () async {
-                          await showCupertinoModalPopup(
+                          await showAdaptivePopup(
                               context: context,
                               builder: (BuildContext context) {
                                 return CupertinoPageScaffold(
@@ -388,7 +389,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                         title: const Text('已经用时'),
                         trailing: Text(durationToString(now.timeSpent)),
                         onTap: () async {
-                          await showCupertinoModalPopup(
+                          await showAdaptivePopup(
                               context: context,
                               builder: (BuildContext context) {
                                 return CupertinoPageScaffold(
@@ -495,7 +496,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                         title: const Text('重复'),
                         trailing: Text(deadlineRepeatTypeName[now.repeatType]!),
                         onTap: () async {
-                          await showCupertinoModalPopup(
+                          await showAdaptivePopup(
                               context: context,
                               builder: (BuildContext context) {
                                 return CupertinoPageScaffold(
@@ -547,7 +548,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                           title: const Text('重复周期'),
                           trailing: Text('${now.repeatPeriod} 天'),
                           onTap: () async {
-                            await showCupertinoModalPopup(
+                            await showAdaptivePopup(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return CupertinoPageScaffold(
@@ -589,7 +590,7 @@ class _TaskEditPageState extends State<TaskEditPage> {
                           trailing:
                               Text(TimeHelper.chineseDate(now.repeatEndsTime)),
                           onTap: () async {
-                            await showCupertinoModalPopup(
+                            await showAdaptivePopup(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return CupertinoPageScaffold(

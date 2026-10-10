@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'dart:io';
 
 import 'package:device_calendar/device_calendar.dart';
@@ -489,7 +490,7 @@ class CalendarToSystemManager {
 
   /// 显示日历同步选项对话框
   void showCalendarSyncDialog(BuildContext context) {
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       builder: (BuildContext actionSheetContext) {
         return CupertinoActionSheet(
@@ -529,7 +530,7 @@ class CalendarToSystemManager {
       return;
     }
 
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       builder: (BuildContext actionSheetContext) {
         return CupertinoActionSheet(

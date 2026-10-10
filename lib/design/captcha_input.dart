@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -21,7 +22,7 @@ class ImageCodePortal {
     Uint8List currentImage = imageBytes;
     _inputController.clear();
 
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       barrierDismissible: false, // 强制用户点击按钮
       builder: (context) {

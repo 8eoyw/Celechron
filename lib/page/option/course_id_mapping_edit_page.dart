@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:flutter/cupertino.dart';
 
 import 'package:get/get.dart';
@@ -220,7 +221,7 @@ class CourseIdMappingEditPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 CupertinoButton(
                   onPressed: () async {
-                    showCupertinoModalPopup(
+                    showAdaptivePopup(
                         context: context,
                         builder: (BuildContext context) {
                           return CourseIdMappingEditForm(title: '添加新的映射关系');

@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:celechron/design/custom_colors.dart';
@@ -448,7 +449,7 @@ class FlowPage extends StatelessWidget {
                     ),
                     CupertinoButton(
                       onPressed: () async {
-                        await showCupertinoModalPopup(
+                        await showAdaptivePopup(
                             context: context,
                             builder: (BuildContext context) {
                               return CupertinoPageScaffold(
@@ -659,35 +660,61 @@ class FlowPage extends StatelessWidget {
                     break;
                   }
                 }
+                Widget buildItem(BuildContext context, int index) {
+                  var container = Container(
+                    padding: EdgeInsets.only(
+                        top: index == 0 ? 0 : 5,
+                        bottom: 5,
+                        left: 16,
+                        right: 16),
+                    child: (_flowController.flowList[index].hasStarted ||
+                            index == 0)
+                        ? createFirst(
+                            context,
+                            _flowController.flowList[index],
+                            index == 0
+                                ? (_flowController.flowList[index].hasStarted
+                                    ? '正在进行'
+                                    : '即将开始')
+                                : null,
+                          )
+                        : createCard(context, _flowController.flowList[index],
+                            index == lastWaitingFlowIndex ? '之后的安排' : null),
+                  );
+
+                  return container;
+                }
+
+                // 宽屏：正在进行/即将开始 与 之后的安排 分左右两栏
+                if (useDesktopColumns(MediaQuery.sizeOf(context).width) &&
+                    lastWaitingFlowIndex != null &&
+                    lastWaitingFlowIndex > 0) {
+                  final split = lastWaitingFlowIndex;
+                  final count = _flowController.flowList.length;
+                  return SliverToBoxAdapter(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(children: [
+                            for (var i = 0; i < split; i++)
+                              buildItem(context, i),
+                          ]),
+                        ),
+                        Expanded(
+                          child: Column(children: [
+                            for (var i = split; i < count; i++)
+                              buildItem(context, i),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (BuildContext context, int index) {
-                      var container = Container(
-                        padding: EdgeInsets.only(
-                            top: index == 0 ? 0 : 5,
-                            bottom: 5,
-                            left: 16,
-                            right: 16),
-                        child: (_flowController.flowList[index].hasStarted ||
-                                index == 0)
-                            ? createFirst(
-                                context,
-                                _flowController.flowList[index],
-                                index == 0
-                                    ? (_flowController
-                                            .flowList[index].hasStarted
-                                        ? '正在进行'
-                                        : '即将开始')
-                                    : null,
-                              )
-                            : createCard(
-                                context,
-                                _flowController.flowList[index],
-                                index == lastWaitingFlowIndex ? '之后的安排' : null),
-                      );
-
-                      return container;
-                    },
+                    buildItem,
                     childCount: _flowController.flowList.length,
                   ),
                 );

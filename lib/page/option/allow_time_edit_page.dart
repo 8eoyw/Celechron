@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:celechron/design/persistent_headers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
@@ -72,7 +73,7 @@ class _DateTimePairEditDialogState extends State<DateTimePairEditDialog> {
                     ),
                     CupertinoButton(
                       onPressed: () async {
-                        await showCupertinoModalPopup(
+                        await showAdaptivePopup(
                             context: context,
                             builder: (BuildContext context) {
                               return CupertinoPageScaffold(
@@ -115,7 +116,7 @@ class _DateTimePairEditDialogState extends State<DateTimePairEditDialog> {
                     ),
                     CupertinoButton(
                       onPressed: () async {
-                        await showCupertinoModalPopup(
+                        await showAdaptivePopup(
                             context: context,
                             builder: (BuildContext context) {
                               return CupertinoPageScaffold(

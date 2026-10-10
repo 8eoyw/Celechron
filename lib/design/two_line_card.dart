@@ -218,7 +218,7 @@ class _TwoLineCardState extends State<TwoLineCard>
       ),
     );
 
-    return widget.animate
+    final Widget card = widget.animate
         ? GestureDetector(
             onTapDown: (_) async {
               isDown = true;
@@ -238,6 +238,8 @@ class _TwoLineCardState extends State<TwoLineCard>
             onTapCancel: () => _animationController.reverse(),
             onTap: widget.onTap,
             onLongPress: widget.onLongPress,
+            // 桌面端右键等同长按
+            onSecondaryTap: widget.onLongPress,
             child: ScaleTransition(scale: _scaleAnimation, child: core),
           )
         : (widget.onTap == null && widget.onLongPress == null)
@@ -245,7 +247,14 @@ class _TwoLineCardState extends State<TwoLineCard>
             : GestureDetector(
                 onTap: widget.onTap != null ? () => widget.onTap!.call() : null,
                 onLongPress: widget.onLongPress,
+                // 桌面端右键等同长按
+                onSecondaryTap: widget.onLongPress,
                 child: core,
               );
+    return MouseRegion(
+      cursor:
+          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      child: card,
+    );
   }
 }

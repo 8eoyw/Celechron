@@ -1,4 +1,5 @@
 // Official packages
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:celechron/page/scholar/todo/todo_card.dart';
 import 'package:celechron/http/zjuServices/exceptions.dart';
 import 'package:celechron/utils/platform_features.dart';
@@ -146,6 +147,8 @@ class ScholarPage extends StatelessWidget {
   // 鼠标拖动，横向列表若不响应鼠标，拖动会漏到 PageView 上造成误切页；
   // 内层可滚动组件在手势竞技中优先，包上后拖动由列表自己消费（触屏行为不变）
   Widget _mouseDraggable(BuildContext context, Widget child) {
+    // 桌面端不做鼠标拖动：横向列表已改为换行排布，切页也不再靠拖动
+    if (PlatformFeatures.isDesktop) return child;
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(
         scrollbars: false,
@@ -155,6 +158,27 @@ class ScholarPage extends StatelessWidget {
         },
       ),
       child: child,
+    );
+  }
+
+  Widget _semesterChips(
+      {required int itemCount, required IndexedWidgetBuilder itemBuilder}) {
+    if (PlatformFeatures.isDesktop) {
+      return Builder(
+          builder: (context) => Wrap(
+                runSpacing: 6,
+                children: [
+                  for (var i = 0; i < itemCount; i++)
+                    // 与移动端列表中的占位宽度一致，避免按钮被 Wrap 撑满整行
+                    SizedBox(
+                        width: 90, height: 30, child: itemBuilder(context, i)),
+                ],
+              ));
+    }
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: itemCount,
+      itemBuilder: itemBuilder,
     );
   }
 
@@ -640,23 +664,16 @@ class ScholarPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             if (_scholarController.todos.isNotEmpty)
-                              SizedBox(
-                                  height: 102,
-                                  child: _mouseDraggable(
-                                      context,
-                                      ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount:
-                                              _scholarController.todos.length,
-                                          separatorBuilder: (context, index) =>
-                                              const SizedBox(width: 8),
-                                          itemBuilder: (context, index) {
-                                            final todo =
-                                                _scholarController.todos[index];
-                                            return SizedBox(
-                                                width: 200,
-                                                child: TodoCard(todo: todo));
-                                          })))
+                              _mouseDraggable(
+                                  context,
+                                  DesktopWrapOrScroll(
+                                      itemCount:
+                                          _scholarController.todos.length,
+                                      itemWidth: 200,
+                                      itemHeight: 102,
+                                      itemBuilder: (context, index) => TodoCard(
+                                          todo:
+                                              _scholarController.todos[index])))
                           ],
                         ))),
               ],
@@ -859,12 +876,11 @@ class ScholarPage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 30,
+                        height: PlatformFeatures.isDesktop ? null : 30,
                         child: _mouseDraggable(
                           context,
                           Obx(
-                            () => ListView.builder(
-                              scrollDirection: Axis.horizontal,
+                            () => _semesterChips(
                               itemCount: _scholarController.semesters.length,
                               itemBuilder: (context, index) {
                                 final semester =
@@ -966,6 +982,7 @@ class ScholarPage extends StatelessWidget {
           ),
         SliverToBoxAdapter(
           child: Obx(() {
+            final wide = useDesktopColumns(MediaQuery.sizeOf(context).width);
             if (_scholarController.scholar.semesters.isNotEmpty) {
               return Padding(
                 padding: EdgeInsets.only(
@@ -989,16 +1006,27 @@ class ScholarPage extends StatelessWidget {
                           _buildTodos(context),
                         ]
                       : [
-                          _buildGradeBrief(context),
-                          const SizedBox(height: 12),
-                          Divider(
-                            thickness: 0,
-                            color: CupertinoDynamicColor.resolve(
-                                CupertinoColors.separator, context),
-                            height: 14,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildSemester(context),
+                          if (wide)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildGradeBrief(context)),
+                                const SizedBox(width: 16),
+                                Expanded(child: _buildSemester(context)),
+                              ],
+                            )
+                          else ...[
+                            _buildGradeBrief(context),
+                            const SizedBox(height: 12),
+                            Divider(
+                              thickness: 0,
+                              color: CupertinoDynamicColor.resolve(
+                                  CupertinoColors.separator, context),
+                              height: 14,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildSemester(context),
+                          ],
                           const SizedBox(height: 12),
                           Divider(
                             thickness: 0,

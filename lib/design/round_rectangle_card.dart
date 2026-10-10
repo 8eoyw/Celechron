@@ -92,7 +92,7 @@ class _RoundRectangleCardState extends State<RoundRectangleCard>
               : CupertinoDynamicColor.resolve(CupertinoColors.white, context),
         ),
         child: widget.child);
-    return widget.animate
+    final Widget card = widget.animate
         ? GestureDetector(
             onTapDown: (_) async {
               isDown = true;
@@ -116,6 +116,11 @@ class _RoundRectangleCardState extends State<RoundRectangleCard>
             child: ScaleTransition(scale: _scaleAnimation, child: core),
           )
         : GestureDetector(onTap: widget.onTap, child: core);
+    return MouseRegion(
+      cursor:
+          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      child: card,
+    );
   }
 }
 

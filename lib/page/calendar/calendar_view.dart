@@ -1,3 +1,5 @@
+import 'package:celechron/utils/platform_features.dart';
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'package:celechron/design/custom_decoration.dart';
 import 'package:celechron/design/sub_title.dart';
 import 'package:celechron/model/task.dart';
@@ -41,6 +43,20 @@ class CalendarPage extends StatelessWidget {
                   children: [
                     if (_calendarController.viewMode.value ==
                         CalendarViewMode.calendar) ...[
+                      if (PlatformFeatures.isDesktop) ...[
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          child: const Icon(CupertinoIcons.chevron_left,
+                              semanticLabel: '上个月'),
+                          onPressed: () => _shiftMonth(-1),
+                        ),
+                        CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          child: const Icon(CupertinoIcons.chevron_right,
+                              semanticLabel: '下个月'),
+                          onPressed: () => _shiftMonth(1),
+                        ),
+                      ],
                       CupertinoButton(
                         padding: EdgeInsets.zero,
                         child: const Icon(
@@ -101,10 +117,24 @@ class CalendarPage extends StatelessWidget {
                       CalendarViewMode.schedule) {
                     return ScheduleView(controller: _calendarController);
                   }
-                  return Column(
+                  // 宽屏：月历在左、当日日程在右，不必上下滚动
+                  final wide =
+                      useDesktopColumns(MediaQuery.sizeOf(context).width);
+                  Widget calendarPane(Widget child) =>
+                      wide ? SizedBox(width: 440, child: child) : child;
+                  List<Widget> detailsPane(List<Widget> children) => wide
+                      ? [
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: children))
+                        ]
+                      : children;
+                  return Flex(
+                    direction: wide ? Axis.horizontal : Axis.vertical,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Padding(
+                      calendarPane(Padding(
                         padding: const EdgeInsets.only(
                             bottom: 5, left: 12, right: 12),
                         child: TableCalendar(
@@ -181,56 +211,60 @@ class CalendarPage extends StatelessWidget {
                             singleMarkerBuilder: singleMarkerBuilder,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Obx(
-                        () => SubSubtitleRow(
-                            padHorizontal: 24,
-                            subtitle: _calendarController.dayDescription(
-                                _calendarController.selectedDay.value
-                                    .copyWith(isUtc: false)),
-                            right: _calendarController
-                                    .scholar.value.specialDates
-                                    .containsKey(_calendarController
-                                        .selectedDay.value
-                                        .copyWith(isUtc: false))
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                        border: Border.all(
+                      )),
+                      ...detailsPane([
+                        const SizedBox(height: 16),
+                        Obx(
+                          () => SubSubtitleRow(
+                              padHorizontal: 24,
+                              subtitle: _calendarController.dayDescription(
+                                  _calendarController.selectedDay.value
+                                      .copyWith(isUtc: false)),
+                              right: _calendarController
+                                      .scholar.value.specialDates
+                                      .containsKey(_calendarController
+                                          .selectedDay.value
+                                          .copyWith(isUtc: false))
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                          border: Border.all(
+                                              color:
+                                                  CustomCupertinoDynamicColors
+                                                      .okGreen.darkColor,
+                                              width: 1),
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                      child: Text(
+                                        _calendarController
+                                                .scholar.value.specialDates[
+                                            _calendarController
+                                                .selectedDay.value
+                                                .copyWith(isUtc: false)]!,
+                                        style: TextStyle(
                                             color: CustomCupertinoDynamicColors
                                                 .okGreen.darkColor,
-                                            width: 1),
-                                        borderRadius:
-                                            BorderRadius.circular(10)),
-                                    child: Text(
-                                      _calendarController
-                                              .scholar.value.specialDates[
-                                          _calendarController.selectedDay.value
-                                              .copyWith(isUtc: false)]!,
-                                      style: TextStyle(
-                                          color: CustomCupertinoDynamicColors
-                                              .okGreen.darkColor,
-                                          fontSize: 12),
-                                    ),
-                                  )
-                                : null),
-                      ),
-                      Expanded(
-                        child: Obx(() {
-                          final events = _calendarController.getEventsForDay(
-                              _calendarController.selectedDay.value);
-                          return ListView.builder(
-                            itemCount: events.length,
-                            itemBuilder: (context, index) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 16),
-                              child: createCard(context, events[index]),
-                            ),
-                          );
-                        }),
-                      ),
+                                            fontSize: 12),
+                                      ),
+                                    )
+                                  : null),
+                        ),
+                        Expanded(
+                          child: Obx(() {
+                            final events = _calendarController.getEventsForDay(
+                                _calendarController.selectedDay.value);
+                            return ListView.builder(
+                              itemCount: events.length,
+                              itemBuilder: (context, index) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 5, horizontal: 16),
+                                child: createCard(context, events[index]),
+                              ),
+                            );
+                          }),
+                        ),
+                      ]),
                     ],
                   );
                 },
@@ -240,6 +274,12 @@ class CalendarPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _shiftMonth(int delta) {
+    final focused = _calendarController.focusedDay.value;
+    _calendarController.focusedDay.value =
+        DateTime(focused.year, focused.month + delta, 1);
   }
 
   Future<void> newDeadline(context, {required DateTime time}) async {
@@ -254,7 +294,7 @@ class CalendarPage extends StatelessWidget {
     deadline.repeatEndsTime = time.copyWith();
     deadline.type = TaskType.fixed;
     deadline.status = TaskStatus.running;
-    Task? res = await showCupertinoModalPopup(
+    Task? res = await showAdaptivePopup(
       context: context,
       builder: (BuildContext context) {
         return TaskEditPage(deadline);
@@ -315,7 +355,7 @@ class CalendarPage extends StatelessWidget {
               CupertinoDialogAction(
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  Task res = await showCupertinoModalPopup(
+                  Task res = await showAdaptivePopup(
                         context: context,
                         builder: (BuildContext context) {
                           return TaskEditPage(deadline);

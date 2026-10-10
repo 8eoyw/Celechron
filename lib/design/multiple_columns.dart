@@ -55,17 +55,20 @@ class _ColumnWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-        child: GestureDetector(
-            onTap: onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Column(
-              children: [
-                content,
-                Text(title,
-                    style: const TextStyle(
-                        color: CupertinoColors.systemGrey, fontSize: 14)),
-              ],
-            )));
+        child: MouseRegion(
+            cursor:
+                onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+            child: GestureDetector(
+                onTap: onTap,
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  children: [
+                    content,
+                    Text(title,
+                        style: const TextStyle(
+                            color: CupertinoColors.systemGrey, fontSize: 14)),
+                  ],
+                ))));
   }
 }
 

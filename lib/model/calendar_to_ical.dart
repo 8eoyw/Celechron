@@ -1,3 +1,4 @@
+import 'package:celechron/design/desktop_adaptive.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
@@ -366,7 +367,7 @@ class CalendarToIcal {
 
   /// 显示导出课程表对话框
   static void showExportDialog(BuildContext context, Scholar scholar) {
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       builder: (BuildContext popupContext) => CupertinoActionSheet(
         title: const Text('导出课程表'),
@@ -418,7 +419,7 @@ class CalendarToIcal {
     }
 
     /// 显示学期选择对话框 （UI界面）
-    showCupertinoModalPopup(
+    showAdaptivePopup(
       context: context,
       builder: (BuildContext popupContext) => CupertinoActionSheet(
         title: const Text('选择学期'),
