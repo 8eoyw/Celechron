@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,6 +9,7 @@ import 'package:celechron/worker/fuse.dart';
 import 'package:celechron/model/scholar.dart';
 import 'package:celechron/model/period.dart';
 import 'package:celechron/model/option.dart';
+import 'package:celechron/services/diagnostic_log_service.dart';
 import 'package:celechron/utils/utils.dart';
 import 'adapters/duration_adapter.dart';
 import 'adapters/scholar_adapter.dart';
@@ -43,21 +46,35 @@ class DatabaseHelper {
     originalWebPageBox = await Hive.openBox(dbOriginalWebPage);
     fuseBox = await Hive.openBox(dbFuse);
     customGpaBox = await Hive.openBox(dbCustomGpa);
-    secureStorage = const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
-    // Migrate all items without groupID
-    var secureStorageItems = await secureStorage.readAll(
-        iOptions: const IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock,
-            accountName: 'Celechron'));
-    await Future.forEach(secureStorageItems.entries, (e) async {
-      await secureStorage.delete(
-          key: e.key,
+    secureStorage =
+        const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
+    // Migrate all items without groupID（iOS App Group 迁移）。
+    // macOS 的传统钥匙串不支持一次读出全部条目（readAll 返回 -50），且用不到这步迁移；
+    // 钥匙串出错只记日志，不能让启动失败（否则桌面版停在黑屏）
+    if (Platform.isMacOS) return;
+    try {
+      var secureStorageItems = await secureStorage.readAll(
           iOptions: const IOSOptions(
               accessibility: KeychainAccessibility.first_unlock,
               accountName: 'Celechron'));
-      await secureStorage.write(
-          key: e.key, value: e.value, iOptions: secureStorageIOSOptions);
-    });
+      await Future.forEach(secureStorageItems.entries, (e) async {
+        await secureStorage.delete(
+            key: e.key,
+            iOptions: const IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock,
+                accountName: 'Celechron'));
+        await secureStorage.write(
+            key: e.key, value: e.value, iOptions: secureStorageIOSOptions);
+      });
+    } on Object catch (error, stackTrace) {
+      DiagnosticLogService.instance.record(
+        level: CelechronLogLevel.warning,
+        module: '安全存储',
+        operation: 'migrateKeychainGroup',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   // Options
