@@ -95,6 +95,19 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Bundle the MSVC C++ runtime (msvcp140 / vcruntime140 / vcruntime140_1) next to
+# the executable so the app runs on machines without the VC++ Redistributable.
+# The Universal CRT ships with Windows 10+, so it is not bundled.
+set(CMAKE_INSTALL_UCRT_LIBRARIES FALSE)
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+include(InstallRequiredSystemLibraries)
+# Only the three DLLs the app and its plugins actually import.
+list(FILTER CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS INCLUDE
+  REGEX "(msvcp140|vcruntime140|vcruntime140_1)\.dll$")
+install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)
+
 # Install the AOT library on non-Debug builds only.
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
