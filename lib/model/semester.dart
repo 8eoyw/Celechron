@@ -205,6 +205,9 @@ class Semester {
                 (e.time.length) * ((e.oddWeek ? 1 : 0) + (e.evenWeek ? 1 : 0)));
   }
 
+  /// 每节课的 [开始, 结束]（距当天 0 点），index 从 1 开始
+  List<List<Duration>> get sessionToTime => _sessionToTime;
+
   List<Period>? _periodsCache;
 
   void _invalidatePeriodsCache() => _periodsCache = null;
