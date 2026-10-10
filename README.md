@@ -111,7 +111,7 @@ xattr -cr /Applications/Celechron.app
 
 - 只在本科生账号上测试过，研究生账号未测试，欢迎反馈。
 - 「同步到系统日历」在桌面版上不可用。
-- macOS 版由 GitHub Actions 自动编译，作者没有在实体 Mac 上做过完整测试，欢迎反馈。
+- macOS 版已在 macOS 26（Apple 芯片）上实测可用，Intel 芯片的 Mac 尚未实测，欢迎反馈。
 - 暂无自动更新，新版本发布在 [Releases](../../releases)。
 
 <details>
