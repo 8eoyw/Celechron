@@ -1,0 +1,73 @@
+name: Build macOS desktop
+
+# 在 GitHub 的 macOS 机器上编译桌面版（lib/main_desktop.dart），打包成 .dmg 与 .zip。
+# 手动运行：Actions → Build macOS desktop → Run workflow；发布 Release 时会自动附加到该 Release。
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Build
+        run: |
+          flutter pub get
+          flutter build macos --release -t lib/main_desktop.dart
+
+      - name: Inspect app
+        run: |
+          APP=build/macos/Build/Products/Release/Celechron.app
+          lipo -archs "$APP/Contents/MacOS/Celechron"
+          codesign -dv "$APP" 2>&1 | grep -E "Signature|Identifier|TeamIdentifier"
+          codesign -d --entitlements - "$APP"
+
+      # 未签名的 App 如果带了需要开发者证书的权限，会在启动时被系统直接杀掉；
+      # 这里真的启动一次，确认 15 秒后进程还在
+      - name: Launch smoke test
+        run: |
+          APP=build/macos/Build/Products/Release/Celechron.app
+          "$APP/Contents/MacOS/Celechron" > launch.log 2>&1 &
+          PID=$!
+          sleep 15
+          if kill -0 $PID 2>/dev/null; then
+            echo "App still running after 15 s"
+            kill $PID
+          else
+            echo "App exited early"; cat launch.log; exit 1
+          fi
+
+      - name: Package
+        run: |
+          APP=build/macos/Build/Products/Release/Celechron.app
+          mkdir -p dist/dmg
+          cp -R "$APP" dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname Celechron -srcfolder dist/dmg -ov -format UDZO dist/Celechron-macOS.dmg
+          ditto -c -k --keepParent "$APP" dist/Celechron-macOS.zip
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Celechron-macOS
+          path: |
+            dist/Celechron-macOS.dmg
+            dist/Celechron-macOS.zip
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/Celechron-macOS.dmg dist/Celechron-macOS.zip --clobber

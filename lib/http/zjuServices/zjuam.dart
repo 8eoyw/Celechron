@@ -36,7 +36,7 @@ class _SsoLoginKey {
 /// 但不再从持久化存储恢复 iPlanetDirectoryPro。该 Cookie 的服务端寿命和
 /// 轮换规则不可靠，1.2 引入的跨启动复用会把已失效值交给所有子站。
 class ZjuAm {
-  static const _secureStorage = FlutterSecureStorage();
+  static const _secureStorage = FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
   static const _processCookieLifetime = Duration(minutes: 2);
   static final Map<_SsoLoginKey, Future<Cookie?>> _pendingLogins = {};
   static final Map<_SsoLoginKey, _ActiveSsoCookie> _activeCookies = {};

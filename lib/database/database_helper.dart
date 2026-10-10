@@ -43,7 +43,7 @@ class DatabaseHelper {
     originalWebPageBox = await Hive.openBox(dbOriginalWebPage);
     fuseBox = await Hive.openBox(dbFuse);
     customGpaBox = await Hive.openBox(dbCustomGpa);
-    secureStorage = const FlutterSecureStorage();
+    secureStorage = const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
     // Migrate all items without groupID
     var secureStorageItems = await secureStorage.readAll(
         iOptions: const IOSOptions(

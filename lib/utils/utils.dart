@@ -24,6 +24,11 @@ String toStringHumanReadable(DateTime dateTime) {
   return str;
 }
 
+/// macOS 用传统钥匙串：数据保护钥匙串需要 Apple 开发者证书与 keychain-access-groups，
+/// 未签名的桌面版用它会报 -34018，导致保存不了账号密码
+const secureStorageMacOSOptions =
+    MacOsOptions(useDataProtectionKeyChain: false);
+
 const secureStorageIOSOptions = kDebugMode
     ? IOSOptions(
         accessibility: KeychainAccessibility.first_unlock,

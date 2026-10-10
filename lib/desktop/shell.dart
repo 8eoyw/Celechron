@@ -73,16 +73,17 @@ class _DesktopShellState extends State<DesktopShell> {
     super.dispose();
   }
 
-  /// Ctrl+1~6 切页，F5 / Ctrl+R 刷新
+  /// Ctrl+1~6 切页，F5 / Ctrl+R 刷新（macOS 上 Cmd 等同 Ctrl）
   bool _onKey(KeyEvent e) {
     if (e is! KeyDownEvent) return false;
     final kb = HardwareKeyboard.instance;
+    final cmd = kb.isControlPressed || kb.isMetaPressed;
     if (e.logicalKey == LogicalKeyboardKey.f5 ||
-        (kb.isControlPressed && e.logicalKey == LogicalKeyboardKey.keyR)) {
+        (cmd && e.logicalKey == LogicalKeyboardKey.keyR)) {
       store.refresh();
       return true;
     }
-    if (kb.isControlPressed && !kb.isAltPressed && !kb.isShiftPressed) {
+    if (cmd && !kb.isAltPressed && !kb.isShiftPressed) {
       const digits = [
         LogicalKeyboardKey.digit1,
         LogicalKeyboardKey.digit2,
