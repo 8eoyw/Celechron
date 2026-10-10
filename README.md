@@ -2,9 +2,9 @@
 
 **浙大课表、成绩、考试、学在浙大作业，在电脑上一个窗口看完。**
 
-这是 [Celechron](https://github.com/Celechron/Celechron) 的非官方 Windows 版：登录和数据抓取沿用原版，界面为鼠标和大屏重新设计。
+这是 [Celechron](https://github.com/Celechron/Celechron) 的非官方桌面版（Windows / macOS）：登录和数据抓取沿用原版，界面为鼠标和大屏重新设计。
 
-**[⬇ 下载安装包](../../releases/latest)** · Windows 10 / 11 64 位 · 免费开源
+**[⬇ 下载](../../releases/latest)** · Windows 10 / 11 64 位 · macOS 10.15+（Intel 与 Apple 芯片）· 免费开源
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
@@ -15,12 +15,30 @@
 
 ## 下载即用
 
-1. 到 [Releases](../../releases/latest) 下载 **`Celechron-Setup-x64.exe`**，双击安装。不需要管理员权限，也不用另装任何运行库。
-2. 打开后用统一身份认证的学号和密码登录。课表、成绩、考试、作业会自动同步。
+到 [Releases](../../releases/latest) 下载对应系统的文件，打开后用统一身份认证的学号和密码登录，课表、成绩、考试、作业会自动同步。
+
+### Windows
+
+下载 **`Celechron-Setup-x64.exe`**，双击安装。不需要管理员权限，也不用另装任何运行库。
 
 > 第一次运行如果弹出「Windows 已保护你的电脑」，点 **更多信息 → 仍要运行**。这是因为程序没有付费的代码签名，不是病毒，源码都在这个仓库里。
 >
 > 不想安装？下载 `Celechron-Windows-x64.zip`，**先解压**再运行里面的 `Celechron.exe`（直接在压缩包里双击会打不开）。
+
+### macOS
+
+下载 **`Celechron-macOS.dmg`**，打开后把 Celechron 拖进「应用程序」文件夹。同一个文件同时支持 Intel 与 Apple 芯片。
+
+程序没有 Apple 的付费签名，第一次打开会被系统拦下：
+
+1. 双击打开一次，看到「无法打开」的提示后点「完成」；
+2. 打开「系统设置 → 隐私与安全性」，拉到底部，点 Celechron 旁边的 **「仍要打开」**，输入开机密码确认。
+
+如果提示的是「已损坏，无法打开」，打开「终端」执行下面这行命令后再打开即可（作用是去掉系统给下载文件加的隔离标记）：
+
+```bash
+xattr -cr /Applications/Celechron.app
+```
 
 ## 界面一览
 
@@ -71,14 +89,14 @@
 
 | 操作 | 快捷键 |
 |---|---|
-| 切换页面（总览 / 课表 / 成绩 / 考试 / 任务 / 设置） | `Ctrl` + `1` ~ `6` |
-| 刷新数据 | `F5` 或 `Ctrl` + `R` |
+| 切换页面（总览 / 课表 / 成绩 / 考试 / 任务 / 设置） | `Ctrl` + `1` ~ `6`（macOS 为 `⌘` + `1` ~ `6`） |
+| 刷新数据 | `F5` 或 `Ctrl` + `R`（macOS 为 `⌘` + `R`） |
 | 查看课程 / 考试详情 | 单击 |
 | 任务操作菜单 | 右键 |
 
 ## 安全与隐私
 
-- 账号密码**只保存在你自己的电脑上**（使用 Windows 的加密存储），登录时只发送给学校的统一身份认证。
+- 账号密码**只保存在你自己的电脑上**（Windows 的加密存储 / macOS 钥匙串），登录时只发送给学校的统一身份认证。
 - 除了学校的系统，程序只访问 Celechron 官方服务器，用来获取校历配置和检查更新，不上传任何个人信息。
 - 没有任何第三方服务器，作者拿不到你的数据。代码完全开源，可以自己检查或编译。
 
@@ -92,7 +110,8 @@
 ## 已知限制
 
 - 只在本科生账号上测试过，研究生账号未测试，欢迎反馈。
-- 「同步到系统日历」在 Windows 上不可用。
+- 「同步到系统日历」在桌面版上不可用。
+- macOS 版由 GitHub Actions 自动编译，作者没有在实体 Mac 上做过完整测试，欢迎反馈。
 - 暂无自动更新，新版本发布在 [Releases](../../releases)。
 
 <details>
@@ -110,7 +129,15 @@ flutter build windows --release -t lib/main_desktop.dart
 
 产物在 `build/windows/x64/runner/Release/`，VC++ 运行库会自动一起复制进去，整个文件夹拷到别的电脑就能运行。
 
-打安装包需要 [Inno Setup 6](https://jrsoftware.org/isinfo.php)：
+macOS 需要 Xcode 与 CocoaPods：
+
+```bash
+flutter build macos --release -t lib/main_desktop.dart
+```
+
+也可以直接在本仓库的 Actions 里运行 **Build macOS desktop**，会产出 `.dmg` 与 `.zip`；发布 Release 时会自动附加上去。
+
+Windows 打安装包需要 [Inno Setup 6](https://jrsoftware.org/isinfo.php)：
 
 ```bash
 ISCC.exe /DAppVersion=1.3.1-desktop.2 windows/installer/celechron.iss
