@@ -159,7 +159,24 @@ class DesktopStore extends ChangeNotifier {
   }
 
   /// 登录：写入学号/密码到数据层后调用 scholar.login()，全 null 即成功；成功后 onLoggedIn() 并刷新
-  Future<String?> login(String user, String pass) async {
+  /// 登录进行中（表单被切页卸载后重建也能知道，避免重复提交）
+  bool get loggingIn => _loginInFlight != null;
+  Future<String?>? _loginInFlight;
+
+  Future<String?> login(String user, String pass) {
+    final pending = _loginInFlight;
+    if (pending != null) return pending;
+    final run = _login(user, pass);
+    _loginInFlight = run;
+    notifyListeners();
+    run.whenComplete(() {
+      _loginInFlight = null;
+      notifyListeners();
+    }).ignore();
+    return run;
+  }
+
+  Future<String?> _login(String user, String pass) async {
     scholar.username = user;
     scholar.password = pass;
     final errors = await scholar.login();

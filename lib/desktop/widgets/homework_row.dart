@@ -13,7 +13,11 @@ Uri homeworkUri(Todo todo) => Uri.parse(todo.courseId == null
     ? 'https://courses.zju.edu.cn/user/index'
     : 'https://courses.zju.edu.cn/course/${todo.courseId}/learning-activity#/${Uri.encodeComponent(todo.id)}');
 Future<void> openHomework(Todo todo) async {
-  await launchUrl(homeworkUri(todo), mode: LaunchMode.externalApplication);
+  try {
+    await launchUrl(homeworkUri(todo), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    // 没有可用浏览器等情况：静默失败，不让异常冒到 UI
+  }
 }
 
 double homeworkRowHeightOf(BuildContext context) =>

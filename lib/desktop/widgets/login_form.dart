@@ -12,7 +12,7 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final user = TextEditingController(), password = TextEditingController();
-  bool busy = false;
+  late bool busy = widget.store.loggingIn;
   String? error;
   @override
   void dispose() {
