@@ -10,13 +10,15 @@ class Todo {
       : id = asString(json["id"]) ?? '',
         name = asString(json["title"]) ?? '未命名作业',
         course = asString(json["course_name"]) ?? '未知课程',
-        endTime = DateTime.tryParse(asString(json["end_time"]) ?? '');
+        // 学在浙大返回 UTC（如 2026-11-12T15:59:00Z），必须转成本地时间，
+        // 否则 23:59 截止会显示成 15:59，按日分组也会错一天。
+        endTime = DateTime.tryParse(asString(json["end_time"]) ?? '')?.toLocal();
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': name,
         'course_name': course,
-        'end_time': endTime?.toIso8601String(),
+        'end_time': endTime?.toUtc().toIso8601String(),
       };
 
   static List<Todo> getAllFromCourses(Map<String, dynamic> json) {
