@@ -53,14 +53,22 @@ class _LoginFormState extends State<LoginForm> {
                 const SizedBox(height: 24),
                 TextField(
                     controller: user,
-                    decoration: const InputDecoration(labelText: '学号'),
+                    style: PaperType.body(context),
+                    decoration: const InputDecoration(
+                        labelText: '学号',
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14)),
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.username]),
                 const SizedBox(height: 16),
                 TextField(
                     controller: password,
+                    style: PaperType.body(context),
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: '密码'),
+                    decoration: const InputDecoration(
+                        labelText: '密码',
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 14)),
                     onSubmitted: (_) => submit(),
                     autofillHints: const [AutofillHints.password]),
                 const SizedBox(height: 16),

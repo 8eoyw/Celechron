@@ -148,9 +148,16 @@ class _DesktopShellState extends State<DesktopShell>
                   onNavigate: navigate,
                   onSearch: search,
                   onOpenDay: (date) {
+                    final mounted = calendar.currentState;
                     navigate(DesktopPage.calendar);
-                    WidgetsBinding.instance.addPostFrameCallback(
-                        (_) => calendar.currentState?.openDay(date));
+                    if (mounted != null) {
+                      mounted.openDay(date);
+                    } else {
+                      // 日程页尚未建立：等它挂载后再跳转，并确保会有下一帧
+                      WidgetsBinding.instance.addPostFrameCallback(
+                          (_) => calendar.currentState?.openDay(date));
+                      WidgetsBinding.instance.ensureVisualUpdate();
+                    }
                   }),
               Expanded(
                   child: FadeTransition(

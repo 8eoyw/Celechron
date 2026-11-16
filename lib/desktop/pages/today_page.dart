@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../model/period.dart';
+import '../../model/todo.dart';
 import '../format.dart';
 import '../store.dart';
 import '../shell/navigation.dart';
 import '../theme/tokens.dart';
-import '../widgets/countdown.dart';
 import '../widgets/course_colors.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/homework_row.dart';
@@ -89,21 +89,25 @@ class TodayPage extends StatelessWidget {
           EmptyState(today.isEmpty ? '今天没有课' : '今天的课已结束'),
           _now(context),
         ] else
-          Expanded(
+          Flexible(
+              fit: FlexFit.loose,
               child: ScrollArea(
                   child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [...children]))),
         if (tomorrowCount > 0) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           const SectionLabel('明天'),
           for (final p in tomorrow.take(tomorrowCount)) _compactRow(context, p),
           if (tomorrow.length > tomorrowCount)
             Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton(
-                    onPressed: () => onNavigate(DesktopPage.calendar),
-                    child: Text('还有 ${tomorrow.length - tomorrowCount} 项')))
+                child: PaperAction(
+                    onTap: () => onNavigate(DesktopPage.calendar),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text('还有 ${tomorrow.length - tomorrowCount} 项',
+                        style: PaperType.meta(context))))
         ]
       ]);
     });
@@ -249,8 +253,10 @@ class TodayPage extends StatelessWidget {
           child: todos.isEmpty
               ? const Align(
                   alignment: Alignment.topLeft, child: EmptyState('没有待交作业'))
-              : HomeworkList(
-                  todos: todos, now: store.now, showOverdueCount: true)),
+              : _TodayHomework(
+                  todos: todos,
+                  now: store.now,
+                  onOpenAll: () => onNavigate(DesktopPage.homework))),
       if (exams.isNotEmpty) ...[
         const SizedBox(height: 16),
         const SectionLabel('考试'),
@@ -258,12 +264,11 @@ class TodayPage extends StatelessWidget {
           PaperAction(
               onTap: () => onNavigate(DesktopPage.exams),
               child: SizedBox(
-                  height: MediaQuery.textScalerOf(context).scale(68),
+                  height: MediaQuery.textScalerOf(context).scale(52),
                   child: Row(children: [
                     SizedBox(
-                        width: 76,
-                        child: CountdownText(
-                            target: e.start, now: store.now, exam: true)),
+                        width: 64,
+                        child: _examCountdown(context, e.start)),
                     Expanded(
                         child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -273,7 +278,7 @@ class TodayPage extends StatelessWidget {
                               style: PaperType.strong(context),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                               '${fmtDate(e.start)} ${fmtRange(e.start, e.end)}${e.exam.location == null ? '' : ' · ${e.exam.location}'}',
                               style: PaperType.meta(context),
@@ -301,4 +306,92 @@ class TodayPage extends StatelessWidget {
       ])
     ]);
   }
+
+  Widget _examCountdown(BuildContext context, DateTime target) {
+    final days = calendarDaysBetween(store.now, target);
+    final c = PaperColors.of(context);
+    final color = days <= 1
+        ? c.danger
+        : days <= 3
+            ? c.warning
+            : c.text2;
+    final number = PaperType.h1(context).copyWith(color: color);
+    return Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: days <= 1 ? examCountdown(target, store.now) : '$days',
+              style: number),
+          if (days > 1)
+            TextSpan(
+                text: ' 天',
+                style: PaperType.meta(context).copyWith(color: color))
+        ]),
+        maxLines: 1);
+  }
+}
+
+/// Fill the summary viewport with complete rows and keep the hidden count visible.
+class _TodayHomework extends StatelessWidget {
+  const _TodayHomework(
+      {required this.todos, required this.now, required this.onOpenAll});
+  final List<Todo> todos;
+  final DateTime now;
+  final VoidCallback onOpenAll;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, bounds) {
+        final row = homeworkRowHeightOf(context);
+        final header = MediaQuery.textScalerOf(context).scale(32);
+        final footer = MediaQuery.textScalerOf(context).scale(32);
+        final groups = homeworkGroups(todos, now);
+        final ends = <double>[];
+        var extent = 0.0;
+        for (final group in groups.values) {
+          extent += header;
+          for (final _ in group) {
+            extent += row;
+            ends.add(extent);
+          }
+        }
+        final hidden = extent > bounds.maxHeight;
+        final available = (bounds.maxHeight - (hidden ? footer : 0))
+            .clamp(0.0, double.infinity);
+        final complete = ends.where((end) => end <= available).length;
+        // Distribute spare height rather than leaving an empty strip above exams
+        // or the hidden-count footer. Row contents retain their scaled 44px size.
+        final extra = complete > 0
+            ? (available - ends[complete - 1]) / complete
+            : 0.0;
+        final children = <Widget>[];
+        for (final group in groups.entries) {
+          children.add(SizedBox(
+              height: header,
+              child: SectionLabel(
+                  group.key == '已逾期'
+                      ? '已逾期 ${group.value.length}'
+                      : group.key,
+                  danger: group.key == '已逾期')));
+          for (final todo in group.value) {
+            children.add(SizedBox(
+                height: row + extra,
+                child: Center(child: HomeworkRow(todo: todo, now: now))));
+          }
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(
+              child: ScrollArea(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children))),
+          if (hidden)
+            PaperAction(
+                onTap: onOpenAll,
+                child: SizedBox(
+                    height: footer,
+                    child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('还有 ${todos.length - complete} 项 →',
+                            style: PaperType.meta(context)))))
+        ]);
+      });
 }

@@ -18,13 +18,13 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
       height:
-          MediaQuery.textScalerOf(context).scale(72).clamp(72, double.infinity),
+          48 + MediaQuery.textScalerOf(context).scale(56).clamp(56, double.infinity),
       child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.fromLTRB(32, 28, 32, 20),
           child: Row(children: [
             Expanded(
                 child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   Text(title,

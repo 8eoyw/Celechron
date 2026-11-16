@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoThemeData;
 import 'package:flutter/material.dart';
-import '../theme.dart' show DSColors;
 import 'tokens.dart';
 
 ThemeData buildDesktopTheme(Brightness brightness) {
@@ -37,16 +36,7 @@ ThemeData buildDesktopTheme(Brightness brightness) {
                     : BorderSide.none))),
     splashFactory: NoSplash.splashFactory,
     cupertinoOverrideTheme: CupertinoThemeData(brightness: brightness),
-    extensions: [
-      c,
-      DSColors(
-          canvas: c.canvas,
-          card: c.surface,
-          border: c.hairline,
-          subtle: c.hover,
-          muted: c.text2,
-          rail: c.sidebar)
-    ],
+    extensions: [c],
     inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: c.surface,

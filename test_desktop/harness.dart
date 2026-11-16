@@ -15,7 +15,6 @@ import 'package:celechron/desktop/theme/app_theme.dart';
 import 'package:celechron/desktop/theme/tokens.dart';
 import 'package:celechron/desktop/widgets/scroll_area.dart';
 import 'package:celechron/desktop/widgets/homework_row.dart';
-import 'package:celechron/desktop/widgets.dart' show DScrollArea;
 import 'package:celechron/page/option/option_controller.dart';
 import 'demo_data.dart';
 
@@ -169,7 +168,6 @@ Future<void> renderMatrix(
               state.position.maxScrollExtent <= .5) continue;
           final allowed = element.findAncestorWidgetOfExactType<ScrollArea>() !=
                   null ||
-              element.findAncestorWidgetOfExactType<DScrollArea>() != null ||
               element.findAncestorWidgetOfExactType<ListView>() != null;
           if (!allowed) problems.add('$name: PAGE-SCROLL');
         }

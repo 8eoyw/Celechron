@@ -86,7 +86,7 @@ class SettingsPage extends StatelessWidget {
                                 tooltip: '首页隐藏 GPA',
                                 child: SizedBox(
                                     height: 32,
-                                    width: 48,
+                                    width: 52,
                                     child: ExcludeFocus(
                                         child: Switch(
                                             value: store.gpaHidden,

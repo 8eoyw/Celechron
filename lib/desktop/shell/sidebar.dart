@@ -74,11 +74,21 @@ class DesktopSidebar extends StatelessWidget {
             Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: _nav(context, page)),
-          if (!collapsed) ...[
-            const SizedBox(height: 16),
-            MiniCalendar(store: store, onOpenDay: onOpenDay)
-          ],
-          const Spacer(),
+          // 迷你月历放不下（矮窗口或文字放大）时整块隐藏，不让侧栏溢出
+          Expanded(
+              child: collapsed
+                  ? const SizedBox.shrink()
+                  : LayoutBuilder(
+                      builder: (context, constraints) => constraints
+                                  .maxHeight >=
+                              MediaQuery.textScalerOf(context).scale(16 + 236)
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Align(
+                                  alignment: Alignment.topCenter,
+                                  child: MiniCalendar(
+                                      store: store, onOpenDay: onOpenDay)))
+                          : const SizedBox.shrink())),
           const Divider(),
           const SizedBox(height: 12),
           if (!collapsed && store.teachingWeek != null)
@@ -162,7 +172,9 @@ class DesktopSidebar extends StatelessWidget {
                 ? c.danger
                 : store.refreshing
                     ? c.warning
-                    : c.success));
+                    : !store.isLoggedIn
+                        ? c.text2
+                        : c.success));
     return Tooltip(
         message: failed ? store.lastErrors.join('\n') : label,
         child: collapsed
