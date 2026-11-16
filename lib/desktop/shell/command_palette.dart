@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../store.dart';
+import '../theme/tokens.dart';
+import '../widgets/list_row.dart';
+import '../widgets/section_label.dart';
+import 'navigation.dart';
+
+Future<DesktopPage?> showCommandPalette(
+        BuildContext context, DesktopStore store) =>
+    showGeneralDialog<DesktopPage>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: '关闭搜索',
+        barrierColor: const Color(0x33000000),
+        transitionDuration: const Duration(milliseconds: 120),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            CommandPalette(store: store));
+
+class _Result {
+  const _Result(this.group, this.title, this.page, [this.subtitle]);
+  final String group, title;
+  final String? subtitle;
+  final DesktopPage page;
+}
+
+class CommandPalette extends StatefulWidget {
+  const CommandPalette({super.key, required this.store});
+  final DesktopStore store;
+  @override
+  State<CommandPalette> createState() => _CommandPaletteState();
+}
+
+class _CommandPaletteState extends State<CommandPalette> {
+  String query = '';
+  int selected = 0;
+  final scroll = ScrollController();
+  @override
+  void dispose() {
+    scroll.dispose();
+    super.dispose();
+  }
+
+  List<_Result> get results {
+    final all = [
+      for (final p in DesktopPage.values) _Result('页面', p.label, p),
+      for (final t in widget.store.todos)
+        _Result('作业', t.name, DesktopPage.homework, t.course),
+      for (final e in [
+        for (final s in widget.store.semesters) ...widget.store.examsOf(s)
+      ])
+        _Result('考试', e.exam.name, DesktopPage.exams)
+    ];
+    final counts = <String, int>{};
+    return all
+        .where((r) => '${r.title} ${r.subtitle ?? ''}'
+            .toLowerCase()
+            .contains(query.toLowerCase()))
+        .where(
+            (r) => counts.update(r.group, (n) => n + 1, ifAbsent: () => 1) <= 8)
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = results;
+    final c = PaperColors.of(context);
+    return Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+            padding:
+                EdgeInsets.only(top: MediaQuery.sizeOf(context).height * .18),
+            child: SizedBox(
+                width: 560,
+                child: Material(
+                    color: c.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                        constraints: BoxConstraints(
+                            maxHeight: MediaQuery.sizeOf(context).height * .64),
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: c.hairline),
+                            boxShadow: c.shadow),
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          Focus(
+                              onKeyEvent: (_, event) {
+                                if (event is! KeyDownEvent) {
+                                  return KeyEventResult.ignored;
+                                }
+                                if (event.logicalKey ==
+                                        LogicalKeyboardKey.arrowDown ||
+                                    event.logicalKey ==
+                                        LogicalKeyboardKey.arrowUp) {
+                                  if (entries.isNotEmpty) {
+                                    setState(() => selected = (selected +
+                                            (event.logicalKey ==
+                                                    LogicalKeyboardKey.arrowDown
+                                                ? 1
+                                                : -1)) %
+                                        entries.length);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (scroll.hasClients) {
+                                        scroll.animateTo(
+                                            (selected * 54.0).clamp(
+                                                0,
+                                                scroll
+                                                    .position.maxScrollExtent),
+                                            duration: const Duration(
+                                                milliseconds: 100),
+                                            curve: Curves.easeOut);
+                                      }
+                                    });
+                                  }
+                                  return KeyEventResult.handled;
+                                }
+                                if (event.logicalKey ==
+                                        LogicalKeyboardKey.enter &&
+                                    entries.isNotEmpty) {
+                                  Navigator.pop(
+                                      context, entries[selected].page);
+                                  return KeyEventResult.handled;
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: SizedBox(
+                                  height: 44,
+                                  child: TextField(
+                                      autofocus: true,
+                                      decoration: const InputDecoration(
+                                          hintText: '搜索页面、作业、考试',
+                                          prefixIcon:
+                                              Icon(Icons.search, size: 18)),
+                                      onChanged: (v) => setState(() {
+                                            query = v;
+                                            selected = 0;
+                                          })))),
+                          const Divider(),
+                          Flexible(
+                              child: ListView(
+                                  controller: scroll,
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.all(12),
+                                  children: [
+                                if (entries.isEmpty)
+                                  Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Text('没有匹配结果',
+                                          style: PaperType.meta(context))),
+                                for (var i = 0; i < entries.length; i++) ...[
+                                  if (i == 0 ||
+                                      entries[i].group != entries[i - 1].group)
+                                    SectionLabel(entries[i].group),
+                                  PaperAction(
+                                      selected: selected == i,
+                                      onTap: () => Navigator.pop(
+                                          context, entries[i].page),
+                                      padding: const EdgeInsets.all(8),
+                                      child: Row(children: [
+                                        Icon(entries[i].page.icon,
+                                            size: 18, color: c.text2),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                            child: Text(entries[i].title,
+                                                style: PaperType.body(context),
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis)),
+                                        if (entries[i].subtitle != null)
+                                          ConstrainedBox(
+                                              constraints: const BoxConstraints(
+                                                  maxWidth: 140),
+                                              child: Text(entries[i].subtitle!,
+                                                  style:
+                                                      PaperType.meta(context),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis))
+                                      ]))
+                                ]
+                              ]))
+                        ]))))));
+  }
+}

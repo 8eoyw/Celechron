@@ -6,9 +6,9 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/desktop/shell.dart';
+import 'package:celechron/desktop/shell/shell.dart';
 import 'package:celechron/desktop/store.dart';
-import 'package:celechron/desktop/theme.dart';
+import 'package:celechron/desktop/theme/app_theme.dart';
 import 'package:celechron/model/option.dart';
 import 'package:celechron/page/option/option_controller.dart';
 import 'package:celechron/services/refresh_coordinator.dart';

@@ -118,6 +118,11 @@ class DesktopStore extends ChangeNotifier {
 
   Scholar get scholar => _scholar.value;
   bool get isLoggedIn => scholar.isLogan;
+  bool get initialLoading =>
+      refreshing &&
+      todos.isEmpty &&
+      scholar.periods.isEmpty &&
+      semesters.isEmpty;
   String get username => scholar.username ?? '';
 
   bool refreshing = false;
@@ -325,6 +330,20 @@ class DesktopStore extends ChangeNotifier {
     return periodsBetween(d, d.add(const Duration(days: 1)));
   }
 
+  /// Agenda also includes fixed tasks that have not been generated into flow yet.
+  List<Period> agendaPeriodsOn(DateTime day) {
+    final d = DateTime(day.year, day.month, day.day);
+    final seen = <String>{};
+    return [
+      ...periodsOfDay(d),
+      for (final task in fixedTasks) ...task.getPeriodOfDay(d),
+    ]
+        .where((p) => seen.add(
+            '${p.type}|${p.summary}|${p.startTime}|${p.endTime}|${p.location}'))
+        .toList()
+      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+  }
+
   /// 一周七天的时段，index 0 = 周一
   List<List<Period>> periodsOfWeek(DateTime monday) => [
         for (var i = 0; i < 7; i++) periodsOfDay(monday.add(Duration(days: i))),
@@ -418,6 +437,22 @@ class DesktopStore extends ChangeNotifier {
       });
     return list;
   }
+
+  List<Todo> todosOn(DateTime day) => todos
+      .where((t) =>
+          t.endTime != null &&
+          t.endTime!.year == day.year &&
+          t.endTime!.month == day.month &&
+          t.endTime!.day == day.day)
+      .toList();
+
+  List<ExamEntry> examsOn(DateTime day) =>
+      [for (final s in scholar.semesters) ...examsOf(s)]
+          .where((e) =>
+              e.start.year == day.year &&
+              e.start.month == day.month &&
+              e.start.day == day.day)
+          .toList();
 
   TodoGroup groupOf(Todo t) {
     final end = t.endTime;

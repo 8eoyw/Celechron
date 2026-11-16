@@ -269,6 +269,7 @@ Scholar buildDemoScholar({
   String at(Duration d) => now.add(d).toIso8601String();
   // (标题, 课程, 距今天几天, 截止时, 分)：截止时间取常见的整点/23:59
   final todos = [
+    ('实验报告一', '数字逻辑设计', -2, 23, 59),
     ('第3次上机实验', '数据结构基础', 0, 23, 59),
     ('习题课作业 4', '离散数学及其应用', 1, 15, 59),
     ('第二章习题', '概率论与数理统计', 3, 23, 59),
@@ -299,6 +300,8 @@ Scholar buildDemoScholar({
           'id': 'demo-todo-$i',
           'title': todos[i].$1,
           'course_name': todos[i].$2,
+          'course_id': 1000 + i,
+          'type': 'homework',
           'end_time': DateTime(now.year, now.month, now.day + todos[i].$3,
                   todos[i].$4, todos[i].$5)
               .toIso8601String(),

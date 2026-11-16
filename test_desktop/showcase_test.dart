@@ -1,344 +1,207 @@
-// 桌面版宣传截图（不打开窗口、不联网、不改动真实数据）：
-// 画面上的学生数据全部是虚构的（test_desktop/demo_data.dart），不会出现本机账号的课程、成绩、作业：
-// 只从本机缓存的 dbuser.hive 里读取校历（节次时间、日期、节假日调休），其它 Hive 库一律为空。
-// 以 1.5 倍分辨率输出各页面截图。
-//
-// 运行：flutter test test_desktop/showcase_test.dart
-// 可选环境变量：CELECHRON_HIVE_DIR（默认 %USERPROFILE%\Documents）、
-//              CELECHRON_SHOWCASE_OUT（默认 系统临时目录\celechron_probe）
 import 'dart:io';
-import 'dart:ui' as ui;
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
-import 'package:hive/hive.dart';
-
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/desktop/shell.dart';
-import 'package:celechron/desktop/store.dart';
-import 'package:celechron/desktop/theme.dart';
-import 'package:celechron/desktop/widgets.dart';
-import 'package:celechron/desktop/side_panels.dart';
-import 'package:celechron/model/period.dart';
-import 'package:celechron/page/option/option_controller.dart';
-
-import 'demo_data.dart';
-
-const _size = Size(1184, 781);
-
-Future<void> _loadFont(String family, List<String> paths) async {
-  final loader = FontLoader(family);
-  for (final p in paths) {
-    final f = File(p);
-    if (f.existsSync()) {
-      final bytes = await f.readAsBytes();
-      loader.addFont(Future.value(ByteData.view(bytes.buffer)));
-    }
-  }
-  await loader.load();
-}
+import 'package:celechron/desktop/format.dart';
+import 'package:celechron/desktop/shell/shell.dart';
+import 'package:celechron/desktop/shell/sidebar.dart';
+import 'package:celechron/desktop/shell/command_palette.dart';
+import 'package:celechron/desktop/theme/app_theme.dart';
+import 'package:celechron/desktop/widgets/homework_row.dart';
+import 'package:celechron/desktop/widgets/login_form.dart';
+import 'package:celechron/desktop/widgets/skeleton.dart';
+import 'package:celechron/desktop/widgets/scroll_area.dart';
+import 'package:celechron/model/todo.dart';
+import 'harness.dart';
 
 void main() {
-  late DesktopStore store;
-  late Directory outDir;
-
-  test('deadline calendar labels and overdue countdown', () {
-    final now = DateTime(2026, 11, 16, 12);
-    expect(fmtDeadline(DateTime(2026, 11, 16, 23, 59), now), '今天 23:59');
-    expect(fmtDeadline(DateTime(2026, 11, 17, 15, 59), now), '明天 15:59');
-    expect(fmtDeadline(DateTime(2026, 11, 18, 23, 59), now), '周三 23:59');
-    expect(fmtDeadline(DateTime(2026, 11, 23, 23, 59), now), '周一 23:59');
-    expect(fmtDeadline(DateTime(2026, 11, 28, 23, 59), now), '11/28 周六 23:59');
-    expect(
-        fmtDeadline(DateTime(2027, 1, 1, 0, 5), DateTime(2026, 12, 31, 23, 59)),
-        '明天 00:05');
-    expect(fmtDeadlineCountdown(now.subtract(const Duration(days: 2)), now),
-        '已逾期 2 天');
-    expect(fmtDeadlineCountdown(now.add(const Duration(hours: 11)), now),
-        '11 小时后');
+  test('calendar days, UTC homework roundtrip and deep links', () {
+    final now = DateTime(2026, 11, 16, 23, 59);
+    expect(calendarDaysBetween(now, DateTime(2026, 11, 17, 9)), 1);
+    expect(examCountdown(DateTime(2026, 11, 17, 9), now), '明天');
+    expect(fmtDeadline(DateTime(2026, 11, 18, 23, 59), now), '周三 11/18 23:59');
+    final todo = Todo.fromJson({
+      'id': '42',
+      'course_id': '123',
+      'type': 'homework',
+      'end_time': '2026-11-16T15:59:00Z'
+    });
+    expect(todo.endTime, DateTime.parse('2026-11-16T15:59:00Z').toLocal());
+    expect(todo.toJson()['end_time'], '2026-11-16T15:59:00.000Z');
+    expect(todo.toJson()['course_id'], 123);
+    expect(todo.toJson()['type'], 'homework');
+    expect(homeworkUri(todo).toString(),
+        'https://courses.zju.edu.cn/course/123/learning-activity#/42');
+    todo.courseId = null;
+    expect(homeworkUri(todo).path, '/user/index');
   });
-
-  setUpAll(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    // flutter_secure_storage 在测试环境没有原生实现：返回空，不读取真实凭据
+  testWidgets('showcase matrix and interaction states', (tester) async {
+    String? copiedText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-      (call) async => call.method == 'readAll' ? <String, String>{} : null,
-    );
-
-    final src = Platform.environment['CELECHRON_HIVE_DIR'] ??
-        '${Platform.environment['USERPROFILE']}\\Documents';
-    final tmp = await Directory.systemTemp.createTemp('celechron_hive_');
-    for (final f in Directory(src).listSync().whereType<File>()) {
-      if (f.path.endsWith('dbuser.hive')) {
-        await f.copy(
-            '${tmp.path}${Platform.pathSeparator}${f.uri.pathSegments.last}');
-      }
-    }
-    Hive.init(tmp.path);
-    final db = Get.put(DatabaseHelper(), tag: 'db');
-    await db.init();
-    // 只取校历这类全校公共字段，真实课程/成绩/作业不进入画面
-    final real = await db.getScholar();
-    final calendars = <String, Map<String, dynamic>>{
-      for (final sem in real.semesters)
-        sem.name: {
-          for (final k in [
-            'sessionToTime',
-            'dayOfWeekToDays',
-            'holidays',
-            'exchanges'
-          ])
-            k: sem.toJson()[k],
-        },
-    };
-    final demo = buildDemoScholar(
-      calendars: calendars,
-      specialDates:
-          real.specialDates.map((k, v) => MapEntry(k.toIso8601String(), v)),
-      now: DateTime.now(),
-    );
-    Get.put(demo.obs, tag: 'scholar');
-    Get.put(db.getTaskList().obs, tag: 'taskList');
-    Get.put(db.getTaskListUpdateTime().obs, tag: 'taskListLastUpdate');
-    Get.put(db.getFlowList().obs, tag: 'flowList');
-    Get.put(db.getFlowListUpdateTime().obs, tag: 'flowListLastUpdate');
-    Get.put(db.getOption(), tag: 'option');
-    Get.put(db.getFuse().obs, tag: 'fuse');
-    Get.put(OptionController(), tag: 'optionController');
-
-    await _loadFont(DS.font, ['C:\\Windows\\Fonts\\msyh.ttc']);
-    final flutterRoot =
-        Platform.environment['FLUTTER_ROOT'] ?? 'D:\\dev\\flutter';
-    await _loadFont('MaterialIcons', [
-      '$flutterRoot\\bin\\cache\\artifacts\\material_fonts\\MaterialIcons-Regular.otf'
-    ]);
-
-    outDir = Directory(Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
-        '${Directory.systemTemp.path}${Platform.pathSeparator}celechron_showcase')
-      ..createSync(recursive: true);
-  });
-
-  testWidgets('desktop showcase', (tester) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    tester.view.physicalSize = _size;
-    tester.view.devicePixelRatio = 1.0;
-
-    store = DesktopStore()..start(autoRefresh: false);
-    if (store.gpaHidden) store.toggleGpaHidden(); // 虚构数据，绩点直接显示
-    store.lastRefreshAt = DateTime.now(); // 顶栏显示「同步于 刚刚」
-    final boundary = GlobalKey();
-    Future<void> app(Brightness b) async {
-      await tester.pumpWidget(RepaintBoundary(
-        key: boundary,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: buildDesktopTheme(b),
-          home: DesktopShell(store: store),
-        ),
-      ));
-      await tester.pump(const Duration(milliseconds: 300));
-    }
-
-    Future<void> snap(String name) => tester.runAsync(() async {
-          final ro = boundary.currentContext!.findRenderObject()
-              as RenderRepaintBoundary;
-          final ui.Image img = await ro.toImage(pixelRatio: 1.5);
-          final png = await img.toByteData(format: ui.ImageByteFormat.png);
-          File('${outDir.path}${Platform.pathSeparator}$name.png')
-              .writeAsBytesSync(png!.buffer.asUint8List());
-        });
-
-    void checkLayout() {
-      expect(tester.takeException(), isNull);
-      for (final element in find.byType(Scrollable).evaluate()) {
-        final state = (element as StatefulElement).state as ScrollableState;
-        if (!state.position.hasContentDimensions ||
-            state.position.maxScrollExtent <= 0.5) continue;
-        expect(element.findAncestorWidgetOfExactType<DScrollArea>() != null,
-            isTrue,
-            reason: 'PAGE-SCROLL');
-      }
-      for (final element in find
-          .descendant(of: find.byType(KpiTile), matching: find.byType(RichText))
-          .evaluate()) {
-        final text = element.renderObject! as RenderParagraph;
-        expect(text.didExceedMaxLines, isFalse, reason: 'KPI caption clipped');
-      }
-    }
-
-    Future<void> page(int i) async {
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-      await tester.sendKeyEvent(
-          LogicalKeyboardKey(LogicalKeyboardKey.digit1.keyId + i - 1));
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await tester.pump(const Duration(milliseconds: 300));
-      checkLayout();
-    }
-
-    Future<void> tap(String text) async {
-      await tester.tap(find.text(text));
-      await tester.pump(const Duration(milliseconds: 300));
-      checkLayout();
-    }
-
-    await app(Brightness.light);
-    checkLayout();
-    void checkOverviewHomework() {
-      final rows = find.descendant(
-          of: find.byType(HomeworkList), matching: find.byType(DRow));
-      expect(rows.evaluate().length, greaterThanOrEqualTo(5),
-          reason: 'Overview must show at least five complete homework rows');
-    }
-
-    checkOverviewHomework();
-    await snap('01_总览');
-    await page(2);
-    // 本周是国庆假期，课很少，展示下一周
-    await tester.tap(find.byTooltip('下一周'));
-    await tester.pump(const Duration(milliseconds: 300));
-    await snap('02_课表_周');
-    await tap('月');
-    await snap('03_课表_月');
-    await tap('统计');
-    await snap('04_课表_课时统计');
-    await tap('周');
-    await page(4);
-    await snap('05_考试');
-    final graded = store.semesters.indexWhere((x) => x.grades.isNotEmpty);
-    if (graded >= 0) store.selectSemester(graded);
-    await page(3);
-    await snap('06_成绩');
-
-    store.selectSemester(0);
-    await page(1);
-    await app(Brightness.dark);
-    checkOverviewHomework();
-    await snap('07_总览_深色');
-    await page(2);
-    await snap('08_课表_周_深色');
-    await tap('月');
-    await snap('09_课表_月_深色');
-    await tap('统计');
-    await snap('10_课表_课时统计_深色');
-    await tap('周');
-    await page(4);
-    await snap('11_考试_深色');
-    if (graded >= 0) store.selectSemester(graded);
-    await page(3);
-    await snap('12_成绩_深色');
-
-    // Footer is actionable and the complete list stays in a desktop dialog.
-    await page(1);
-    final homework = find.byType(HomeworkList);
-    final footer =
-        find.descendant(of: homework, matching: find.byType(TextButton));
-    expect(footer, findsOneWidget);
-    await tester.tap(footer);
-    await tester.pump();
-    expect(find.text('全部作业'), findsOneWidget);
-    checkLayout();
-    await tester.tap(find.text('关闭'));
-    await tester.pump();
-
-    // Every homework density has complete rows and an accurate remainder.
-    for (final height in [32.0, 96.0, 128.0, 300.0, 720.0]) {
-      final host = GlobalKey();
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData')
+        copiedText = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    final store = await tester.runAsync(setupDemo);
+    try {
+      await renderMatrix(
+          tester,
+          store!,
+          Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
+              '${Directory.systemTemp.path}/celechron_paper_showcase');
+      tester.view.physicalSize = const Size(1000, 700);
       await tester.pumpWidget(MaterialApp(
           theme: buildDesktopTheme(Brightness.light),
-          home: Scaffold(
-              body: Center(
-                  child: SizedBox(
-                      key: host,
-                      width: 284,
-                      height: height,
-                      child: HomeworkList(store: store))))));
-      final shown = store.todos
-          .where((t) => find.text(t.name).evaluate().isNotEmpty)
-          .length;
-      expect(find.text('还有 ${store.todos.length - shown} 项'),
-          shown < store.todos.length ? findsOneWidget : findsNothing);
-      expect(find.byType(ColorBarTile), findsNWidgets(shown));
-      final bounds = tester.getRect(find.byKey(host));
-      for (final row in find.byType(DRow).evaluate()) {
-        final rect = tester.getRect(find.byWidget(row.widget));
-        expect(rect.top >= bounds.top && rect.bottom <= bounds.bottom, isTrue,
-            reason: 'Partial homework row at height $height');
+          home: DesktopShell(key: UniqueKey(), store: store)));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
+          isTrue);
+      expect(find.text('已逾期 1'), findsOneWidget);
+      expect(find.text('12:04'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'initial rail');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.backslash);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(
+          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
+          isFalse);
+      expect(tester.takeException(), isNull, reason: 'manual expand');
+      tester.view.physicalSize = const Size(1200, 820);
+      await tester.pump();
+      tester.view.physicalSize = const Size(1000, 700);
+      await tester.pump();
+      expect(tester.takeException(), isNull, reason: 'threshold reset');
+      // Palette search includes the course name, supports arrows/Enter, and navigates.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(CommandPalette), findsOneWidget);
+      await tester.enterText(
+          find.descendant(
+              of: find.byType(CommandPalette),
+              matching: find.byType(TextField)),
+          '数字逻辑设计');
+      await tester.pump();
+      expect(find.text('实验报告一'), findsWidgets);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).selected,
+          DesktopPage.homework);
+      // Course filter and context menu remain usable with keyboard focus.
+      await tester.tap(find.text('全部课程'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('数字逻辑设计（2）'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeworkRow), findsNWidgets(2));
+      await tester.tap(find.text('实验报告一'), buttons: kSecondaryMouseButton);
+      await tester.pumpAndSettle();
+      expect(find.text('在浏览器打开'), findsOneWidget);
+      await tester.tap(find.text('复制标题'));
+      await tester.pumpAndSettle();
+      expect(copiedText, '实验报告一');
+      expect(tester.takeException(), isNull);
+      expect(
+          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
+          isTrue);
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(1.25)),
+              child: Scaffold(
+                  body: Center(
+                      child: SizedBox(
+                          width: 340,
+                          child: HomeworkRow(
+                              todo: store.todos.first, now: store.now)))))));
+      await tester.pump();
+      for (final element in find.byType(RichText).evaluate()) {
+        expect((element.renderObject! as RenderParagraph).didExceedMaxLines,
+            isFalse);
       }
-      for (final todo in store.todos
-          .where((t) => find.text(t.name).evaluate().isNotEmpty)) {
-        final date = todo.endTime == null
-            ? '无截止时间'
-            : fmtDeadline(todo.endTime!, store.now);
-        final dateRect = tester.getRect(find.text(date));
-        expect(dateRect.left >= bounds.left && dateRect.right <= bounds.right,
-            isTrue,
-            reason: 'Deadline must stay fully visible');
-        if (todo.endTime != null) {
-          final titleRect = tester.getRect(find.text(todo.name));
-          final countdown = tester.getRect(
-              find.text(fmtDeadlineCountdown(todo.endTime!, store.now)));
-          expect(countdown.center.dy, closeTo(titleRect.center.dy, 0.5));
-          expect(countdown.right, closeTo(bounds.right - DS.s2, 0.5));
+      expect(tester.takeException(), isNull);
+      store.scholar.isLogan = false;
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: DesktopShell(key: UniqueKey(), store: store)));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(LoginForm), findsOneWidget);
+      expect(find.widgetWithText(TextField, '学号'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, '学号'), 'demo');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+      expect(
+          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).selected,
+          DesktopPage.today);
+      expect(tester.takeException(), isNull);
+      // Logged-out bodies for every destination, and PNG coverage at all sizes/themes.
+      final out = Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
+          '${Directory.systemTemp.path}/celechron_paper_showcase';
+      for (final size in desktopSizes) {
+        tester.view.physicalSize = size;
+        for (final brightness in Brightness.values) {
+          final boundary = GlobalKey();
+          await tester.pumpWidget(RepaintBoundary(
+              key: boundary,
+              child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  theme: buildDesktopTheme(brightness),
+                  home: DesktopShell(key: UniqueKey(), store: store))));
+          await tester.pump(const Duration(milliseconds: 300));
+          expect(find.byType(LoginForm), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await saveSnapshot(tester, boundary,
+              '$out/${size.width.toInt()}x${size.height.toInt()}_${brightness.name}_logged_out.png');
         }
       }
-      expect(tester.takeException(), isNull);
-    }
-
-    // Height and width determine which details fit, with title priority in overlaps.
-    final period = Period(
-        summary: '短时段课程',
-        location: '示范教室',
-        startTime: store.now,
-        endTime: store.now.add(const Duration(minutes: 30)));
-    for (final height in [22.0, 40.0, 50.0, 64.0, 100.0]) {
+      for (final page in DesktopPage.values) {
+        await tester.pumpWidget(MaterialApp(
+            theme: buildDesktopTheme(Brightness.light),
+            home: DesktopShell(
+                key: UniqueKey(), store: store, initialPage: page)));
+        await tester.pump();
+        expect(find.byType(LoginForm), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      store.scholar.isLogan = true;
+      store.lastErrors = ['示范离线错误'];
       await tester.pumpWidget(MaterialApp(
           theme: buildDesktopTheme(Brightness.light),
-          home: Scaffold(
-              body: Center(
-                  child: SizedBox(
-                      width: 300,
-                      height: height,
-                      child: TimelineBlock(period: period))))));
-      expect(find.text('短时段课程'), findsOneWidget);
-      expect(find.textContaining('示范教室'),
-          height < 44 ? findsNothing : findsOneWidget);
-      final time = fmtRange(period.startTime, period.endTime);
-      if (height >= 64) {
-        expect(find.text(time), findsOneWidget);
-        expect(find.text('示范教室'), findsOneWidget);
-      } else if (height == 40) {
-        expect(find.text(time), findsOneWidget);
-      } else if (height == 50) {
-        expect(find.text('$time · 示范教室'), findsOneWidget);
-      }
+          home: DesktopShell(key: UniqueKey(), store: store)));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('同步失败'), findsOneWidget);
+      expect(find.text('实验报告一'), findsOneWidget);
+      // First refresh without cached data uses skeletons. A settled empty list uses an empty state.
+      store.scholar.semesters.clear();
+      store.scholar.todos.clear();
+      store.refreshing = true;
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: DesktopShell(key: UniqueKey(), store: store)));
+      await tester.pump();
+      expect(find.byType(SkeletonRows), findsOneWidget);
+      expect(find.byType(ScrollArea), findsNothing);
+      store.refreshing = false;
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: DesktopShell(
+              key: UniqueKey(),
+              store: store,
+              initialPage: DesktopPage.homework)));
+      await tester.pump();
+      expect(find.text('没有待交作业'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    } finally {
+      await disposeDemo(tester, store!);
     }
-    final narrowPeriod =
-        period.copyWith(summary: '离散数学及其应用', location: '紫金港东1A-201示范教室');
-    await tester.pumpWidget(MaterialApp(
-        theme: buildDesktopTheme(Brightness.light),
-        home: Scaffold(
-            body: Center(
-                child: SizedBox(
-                    width: 80,
-                    height: 100,
-                    child: TimelineBlock(period: narrowPeriod))))));
-    final titleParagraph = tester.renderObject<RenderParagraph>(find.descendant(
-        of: find.text(narrowPeriod.summary), matching: find.byType(RichText)));
-    expect(titleParagraph.didExceedMaxLines, isFalse);
-    expect(find.text(fmtRange(period.startTime, period.endTime)), findsNothing);
-    expect(tester.takeException(), isNull);
-
-    store.dispose();
-    Get.deleteAll(force: true);
-    await tester.pumpWidget(const SizedBox());
-    debugDefaultTargetPlatformOverride = null;
-    tester.view.reset();
   });
 }

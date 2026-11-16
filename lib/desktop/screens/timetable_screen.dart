@@ -16,10 +16,27 @@ class TimetableScreen extends StatefulWidget {
   final DesktopStore store;
 
   @override
-  State<TimetableScreen> createState() => _TimetableScreenState();
+  State<TimetableScreen> createState() => TimetableScreenState();
 }
 
-class _TimetableScreenState extends State<TimetableScreen> {
+class TimetableScreenState extends State<TimetableScreen> {
+  // PHASE2: Temporary bridge for the new shell's mini calendar and shortcuts.
+  void openDay(DateTime day) => _goTo(day, mode: _ViewMode.week);
+  void handleKey(String key) {
+    switch (key) {
+      case 'left':
+        _step(-1);
+      case 'right':
+        _step(1);
+      case 't':
+        _goTo(_today);
+      case 'w':
+        _goTo(_anchor, mode: _ViewMode.week);
+      case 'm':
+        _goTo(_anchor, mode: _ViewMode.month);
+    }
+  }
+
   _ViewMode _mode = _ViewMode.week;
 
   /// 视图锚定的日期：周视图显示它所在的周，月视图显示它所在的月
