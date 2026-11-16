@@ -22,6 +22,60 @@ String fmtDate(DateTime t) =>
 /// 周一 … 周日
 String weekdayName(int weekday) => '周${_weekdays[weekday - 1]}';
 
+/// 两个时刻相差的自然日数（按本地日期，不按满 24 小时）：
+/// 23:30 看次日 09:00 的考试是 1 天，不是 0 天。
+int calendarDaysBetween(DateTime from, DateTime to) =>
+    DateTime.utc(to.year, to.month, to.day)
+        .difference(DateTime.utc(from.year, from.month, from.day))
+        .inDays;
+
+/// 文字缩放后的作业行高（Windows「文字大小」调大时两行字不被裁掉）
+double homeworkRowHeightOf(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(DS.homeworkRowHeight);
+
+/// Calendar days, rather than elapsed 24-hour intervals, determine the label.
+String fmtDeadline(DateTime target, DateTime now) {
+  final days = DateTime.utc(target.year, target.month, target.day)
+      .difference(DateTime.utc(now.year, now.month, now.day))
+      .inDays;
+  final date = days == 0
+      ? '今天'
+      : days == 1
+          ? '明天'
+          : days > 1 && days <= 7
+              ? weekdayName(target.weekday)
+              : fmtDate(target);
+  return '$date ${fmtTime(target)}';
+}
+
+String fmtDeadlineCountdown(DateTime target, DateTime now) {
+  if (!target.isBefore(now)) return fmtRelative(target, now);
+  final d = now.difference(target);
+  final text = d.inDays > 0
+      ? '${d.inDays} 天'
+      : d.inHours > 0
+          ? '${d.inHours} 小时'
+          : '${d.inMinutes} 分钟';
+  return '已逾期 $text';
+}
+
+Color deadlineColor(BuildContext context, DateTime target, DateTime now) =>
+    target.isBefore(now)
+        ? DS.danger
+        : target.difference(now) <= const Duration(hours: 24)
+            ? DS.warning
+            : DSColors.of(context).muted;
+
+/// Opaque event fill: grid lines must never show through event text.
+Color eventFill(BuildContext context, Color color, {bool hover = false}) =>
+    Color.alphaBlend(
+        color.withValues(
+            alpha: (Theme.of(context).brightness == Brightness.dark
+                    ? 0.22
+                    : 0.14) +
+                (hover ? 0.05 : 0)),
+        DSColors.of(context).card);
+
 /// 相对时间：「3 小时后」「2 天后」「已过 5 小时」，用于截止时间与倒计时
 String fmtRelative(DateTime target, DateTime now) {
   final diff = target.difference(now);
@@ -71,22 +125,45 @@ class DText {
 
   static TextStyle body(BuildContext c) => TextStyle(
       fontSize: DS.fsBody,
+      fontWeight: FontWeight.w400,
+      fontFeatures: const [FontFeature.tabularFigures()],
       color: Theme.of(c).colorScheme.onSurface,
       height: 1.3);
 
   static TextStyle muted(BuildContext c) =>
-      TextStyle(fontSize: DS.fsSmall, color: DSColors.of(c).muted, height: 1.3);
+      body(c).copyWith(fontSize: DS.fsSmall, color: DSColors.of(c).muted);
+
+  static TextStyle title(BuildContext c) =>
+      strong(c).copyWith(fontSize: DS.fsTitle);
+
+  static TextStyle cardTitle(BuildContext c) =>
+      strong(c).copyWith(fontSize: DS.fsCardTitle);
 
   static TextStyle strong(BuildContext c) =>
       body(c).copyWith(fontWeight: FontWeight.w600);
 
   static TextStyle kpi(BuildContext c) => TextStyle(
         fontSize: DS.fsKpi,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
         color: Theme.of(c).colorScheme.onSurface,
         fontFeatures: const [FontFeature.tabularFigures()],
         height: 1.1,
       );
+}
+
+/// Measure using the inherited desktop font and the current text scale.
+Size measureDesktopText(BuildContext context, String text, TextStyle style,
+    {double maxWidth = double.infinity, int maxLines = 1}) {
+  final painter = TextPainter(
+    text: TextSpan(
+        text: text, style: DefaultTextStyle.of(context).style.merge(style)),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: maxLines,
+  )..layout(maxWidth: maxWidth);
+  final size = painter.size;
+  painter.dispose();
+  return size;
 }
 
 // ───────────────────────── 卡片 ─────────────────────────
@@ -135,7 +212,7 @@ class DCard extends StatelessWidget {
         children: [
           if (title != null)
             SizedBox(
-              height: 38,
+              height: DS.cardHeaderHeight,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: DS.s4),
                 child: Row(
@@ -144,15 +221,19 @@ class DCard extends StatelessWidget {
                       Icon(icon, size: 16, color: colors.muted),
                       const SizedBox(width: DS.s2),
                     ],
-                    Text(title!,
-                        style: TextStyle(
-                            fontSize: DS.fsCardTitle,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface)),
-                    const Spacer(),
+                    Expanded(
+                        child: Text(title!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DText.cardTitle(context))),
                     if (trailing != null)
-                      DefaultTextStyle.merge(
-                          style: DText.muted(context), child: trailing!),
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: DefaultTextStyle.merge(
+                              style: DText.muted(context), child: trailing!),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -219,17 +300,25 @@ class KpiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = DSColors.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: DS.s3, vertical: DS.s2),
+      padding: const EdgeInsets.all(DS.s3),
       decoration: BoxDecoration(
-        color: (color ?? colors.subtle)
-            .withValues(alpha: color == null ? 1 : 0.10),
-        borderRadius: BorderRadius.circular(DS.radiusSm),
+        color: colors.card,
+        border: Border.all(color: colors.border),
+        borderRadius: BorderRadius.circular(DS.radius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(children: [
+            if (color != null) ...[
+              Container(
+                  width: 5,
+                  height: 5,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: DS.s1),
+            ],
             Flexible(
               child: Text(label,
                   style: DText.muted(context),
@@ -238,33 +327,35 @@ class KpiTile extends StatelessWidget {
             ),
             if (action != null) ...[const SizedBox(width: DS.s1), action!],
           ]),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              // 文字型取值（课程名）可截断；数字取值必须完整显示，空间不够时先截副文字
-              if (textValue)
-                Flexible(
-                  child: Text(value,
-                      style: DText.strong(context).copyWith(fontSize: 15.5),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                )
-              else
-                Text(value,
-                    style: DText.kpi(context), maxLines: 1, softWrap: false),
-              if (sub != null) ...[
-                const SizedBox(width: DS.s1),
-                Flexible(
-                  child: Text(sub!,
-                      style: DText.muted(context),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-              ],
-            ],
-          ),
+          const SizedBox(height: DS.s1),
+          SizedBox(
+              height: 29,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: textValue
+                            ? DText.strong(context)
+                                .copyWith(fontSize: DS.fsValue)
+                            : DText.kpi(context))),
+              )),
+          const SizedBox(height: DS.s1),
+          SizedBox(
+              height: 18,
+              child: sub == null
+                  ? null
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(sub!,
+                          style: DText.muted(context),
+                          maxLines: 1,
+                          softWrap: false),
+                    )),
         ],
       ),
     );
@@ -285,11 +376,8 @@ class Pill extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(text,
-            style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: FontWeight.w600,
-                height: 1.4)),
+            style: DText.muted(context).copyWith(
+                color: color, fontWeight: FontWeight.w600, height: 1.4)),
       );
 }
 
@@ -321,7 +409,6 @@ class _DRowState extends State<DRow> {
   Widget build(BuildContext context) {
     final colors = DSColors.of(context);
     final primary = Theme.of(context).colorScheme.primary;
-    final clickable = widget.onTap != null || widget.onSecondaryTapUp != null;
     return MouseRegion(
       cursor:
           widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
@@ -337,7 +424,7 @@ class _DRowState extends State<DRow> {
           decoration: BoxDecoration(
             color: widget.selected
                 ? primary.withValues(alpha: 0.10)
-                : (_hover && clickable ? colors.subtle : null),
+                : (_hover ? colors.subtle : null),
             borderRadius: BorderRadius.circular(DS.radiusSm),
           ),
           alignment: Alignment.centerLeft,
@@ -559,7 +646,8 @@ class DayTimeline extends StatelessWidget {
         Positioned.fill(
           child: CustomPaint(
             painter: _HourGridPainter(
-                hours: endHour - startHour, color: colors.border),
+                hours: endHour - startHour,
+                color: colors.border.withValues(alpha: 0.55)),
           ),
         ),
       ];
@@ -641,11 +729,7 @@ class _TimelineBlockState extends State<TimelineBlock> {
   Widget build(BuildContext context) {
     final p = widget.period;
     final base = periodColor(p);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final titleColor = Color.lerp(base, onSurface, dark ? 0.15 : 0.45)!;
-    final fill =
-        base.withValues(alpha: (dark ? 0.24 : 0.13) + (_hover ? 0.08 : 0));
+    final fill = eventFill(context, base, hover: _hover);
     final isTest = p.type == PeriodType.test;
 
     return Tooltip(
@@ -673,40 +757,84 @@ class _TimelineBlockState extends State<TimelineBlock> {
                 Container(width: 3, color: base),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(5, 3, 3, 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: DS.s2, vertical: 1),
                     child: LayoutBuilder(builder: (context, c) {
-                      // 每行约 15px：先给课名（空间够时两行），剩下的依次给地点、时间
-                      var budget = (c.maxHeight / 15).floor();
-                      if (budget < 1) return const SizedBox.shrink();
-                      final nameLines = budget >= 4 ? 2 : 1;
-                      budget -= nameLines;
-                      final showPlace = budget >= 1 && p.location.isNotEmpty;
-                      if (showPlace) budget -= 1;
-                      final showTime = budget >= 1;
+                      if (c.maxWidth <= 0) return const SizedBox.shrink();
+                      final titleStyle = DText.strong(context);
+                      final metaStyle = DText.muted(context);
+                      final title = isTest ? '【考试】${p.summary}' : p.summary;
+                      final time = fmtRange(p.startTime, p.endTime);
+                      final titleLineHeight =
+                          measureDesktopText(context, title, titleStyle).height;
+                      final metaLineHeight =
+                          measureDesktopText(context, time, metaStyle).height;
+                      if (c.maxHeight < titleLineHeight) {
+                        return const SizedBox.shrink();
+                      }
+                      final narrow = c.maxWidth < DS.timelineNarrowWidth;
+                      final titleLines = narrow
+                          ? (c.maxHeight / titleLineHeight).floor().clamp(1, 3)
+                          : 1;
+                      final titleHeight = measureDesktopText(
+                              context, title, titleStyle,
+                              maxWidth: c.maxWidth, maxLines: titleLines)
+                          .height;
+                      final top = c.maxHeight >= DS.cardHeaderHeight &&
+                              c.maxHeight >= titleHeight + DS.s1
+                          ? 3.0
+                          : 0.0;
+                      var remaining = c.maxHeight - top - titleHeight;
+                      final timeFits =
+                          measureDesktopText(context, time, metaStyle).width <=
+                              c.maxWidth;
+                      final separate = p.location.isNotEmpty &&
+                          timeFits &&
+                          remaining >= 2 * (metaLineHeight + DS.s1);
+                      final details = <Widget>[];
+                      void line(String text, {int lines = 1}) {
+                        details.add(const SizedBox(height: DS.s1));
+                        details.add(Text(text,
+                            maxLines: lines,
+                            overflow: TextOverflow.ellipsis,
+                            style: metaStyle));
+                        remaining -= DS.s1 + lines * metaLineHeight;
+                      }
+
+                      if (separate) {
+                        line(time);
+                        final lines = ((remaining - DS.s1) / metaLineHeight)
+                            .floor()
+                            .clamp(1, 2);
+                        line(p.location, lines: lines);
+                      } else if (narrow) {
+                        // Reserve the title first; omit a time range that cannot fit.
+                        if (timeFits && remaining >= metaLineHeight + DS.s1) {
+                          line(time);
+                        }
+                        if (p.location.isNotEmpty &&
+                            remaining >= metaLineHeight + DS.s1) {
+                          final lines = ((remaining - DS.s1) / metaLineHeight)
+                              .floor()
+                              .clamp(1, 2);
+                          line(p.location, lines: lines);
+                        }
+                      } else if (timeFits &&
+                          remaining >= metaLineHeight + DS.s1) {
+                        line(c.maxHeight >= DS.cardHeaderHeight &&
+                                p.location.isNotEmpty
+                            ? '$time · ${p.location}'
+                            : time);
+                      }
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(isTest ? '【考试】${p.summary}' : p.summary,
-                              maxLines: nameLines,
+                          if (top > 0) SizedBox(height: top),
+                          Text(title,
+                              maxLines: titleLines,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  height: 1.2,
-                                  fontWeight: FontWeight.w600,
-                                  color: titleColor)),
-                          if (showPlace)
-                            Text(p.location,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: DText.muted(context)
-                                    .copyWith(fontSize: 11, height: 1.25)),
-                          if (showTime)
-                            Text(fmtRange(p.startTime, p.endTime),
-                                maxLines: 1,
-                                overflow: TextOverflow.clip,
-                                softWrap: false,
-                                style: DText.muted(context)
-                                    .copyWith(fontSize: 11, height: 1.25)),
+                              style: titleStyle),
+                          ...details,
                         ],
                       );
                     }),

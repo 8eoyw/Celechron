@@ -23,10 +23,10 @@ class TasksScreen extends StatelessWidget {
           children: [
             _column(context, '待办 DDL', store.pendingDeadlines,
                 emptyHint: '暂无待办', isDdl: true, onNew: () => _newTask(context)),
-            SizedBox(width: DS.s3),
+            const SizedBox(width: DS.s3),
             _column(context, '已完成', store.finishedDeadlines,
                 emptyHint: '暂无已完成任务', isDdl: true),
-            SizedBox(width: DS.s3),
+            const SizedBox(width: DS.s3),
             _column(context, '日程', store.fixedTasks, emptyHint: '暂无日程'),
           ],
         );
@@ -78,7 +78,7 @@ class TasksScreen extends StatelessWidget {
   }
 
   Future<void> _newTask(BuildContext context) async {
-    final now = DateTime.now();
+    final now = store.now;
     final newTask = Task(endTime: now, startTime: now, repeatEndsTime: now);
     newTask.reset();
     await _openEditDialog(context, newTask);
@@ -138,7 +138,7 @@ class _TaskRow extends StatelessWidget {
     final color = _taskColor(task);
     final timeText = task.type == TaskType.deadline
         ? fmtRelative(task.endTime, now)
-        : fmtTime(task.startTime) + ' - ' + fmtTime(task.endTime);
+        : fmtRange(task.startTime, task.endTime);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -155,7 +155,7 @@ class _TaskRow extends StatelessWidget {
                     style: DText.strong(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis)),
-            SizedBox(width: DS.s2),
+            const SizedBox(width: DS.s2),
             SizedBox(
                 width: 96,
                 child: Text(timeText,

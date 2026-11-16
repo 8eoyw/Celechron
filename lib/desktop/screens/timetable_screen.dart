@@ -574,9 +574,12 @@ class _MonthChipState extends State<_MonthChip> {
   Widget build(BuildContext context) {
     final p = widget.period;
     final base = periodColor(p);
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final nameColor = Color.lerp(base, onSurface, dark ? 0.15 : 0.45)!;
+    final nameColor = onSurface;
+    final title = p.type == PeriodType.test ? '【考试】${p.summary}' : p.summary;
+    final nameStyle = DText.strong(context)
+        .copyWith(fontSize: 10.5, height: 1.2, color: nameColor);
+    final timeStyle = DText.muted(context).copyWith(fontSize: 10, height: 1.2);
     return Tooltip(
       message: [
         p.summary,
@@ -594,34 +597,37 @@ class _MonthChipState extends State<_MonthChip> {
             margin: const EdgeInsets.only(bottom: 1),
             padding: const EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
-              color: base.withValues(
-                  alpha: (dark ? 0.22 : 0.12) + (_hover ? 0.1 : 0)),
+              color: eventFill(context, base, hover: _hover),
               borderRadius: BorderRadius.circular(3),
             ),
-            child: Row(children: [
-              Container(
-                  width: 3,
-                  height: 10,
-                  decoration: BoxDecoration(
-                      color: base, borderRadius: BorderRadius.circular(1.5))),
-              const SizedBox(width: 3),
-              Text(fmtTime(p.startTime),
-                  style:
-                      DText.muted(context).copyWith(fontSize: 10, height: 1.2)),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Text(
-                    p.type == PeriodType.test ? '【考试】${p.summary}' : p.summary,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 10.5,
-                        height: 1.2,
-                        fontWeight: FontWeight.w600,
-                        color: nameColor)),
-              ),
-            ]),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final showTime =
+                  measureDesktopText(context, title, nameStyle).width +
+                          measureDesktopText(
+                                  context, fmtTime(p.startTime), timeStyle)
+                              .width +
+                          9 <=
+                      constraints.maxWidth;
+              return Row(children: [
+                Container(
+                    width: 3,
+                    height: 10,
+                    decoration: BoxDecoration(
+                        color: base, borderRadius: BorderRadius.circular(1.5))),
+                const SizedBox(width: 3),
+                if (showTime) ...[
+                  Text(fmtTime(p.startTime), style: timeStyle),
+                  const SizedBox(width: 3),
+                ],
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: nameStyle),
+                ),
+              ]);
+            }),
           ),
         ),
       ),

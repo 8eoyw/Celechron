@@ -26,7 +26,8 @@ Entry point: `lib/main_desktop.dart`. Build with: `flutter build windows -t lib/
    - Colors come from `DSColors.of(context)` / `DS.*` / `periodColor()`.
    - Text styles come from `DText.*`.
    - Don't hardcode font sizes or colors. Don't set `fontFamily` (the theme sets it globally).
-   - Keep all text on a single line with `maxLines: 1, overflow: TextOverflow.ellipsis` (multi-line descriptions excepted).
+   - Keep text on a single line with `maxLines: 1, overflow: TextOverflow.ellipsis`,
+     except descriptions and adaptive timeline titles/locations described below.
 6. **Empty states.**
    - When not logged in or there's no data, show `EmptyHint('...')` and never throw.
    - `store.selectedSemester` may be null.
@@ -34,6 +35,39 @@ Entry point: `lib/main_desktop.dart`. Build with: `flutter build windows -t lib/
 8. **Code must pass `flutter analyze` with no errors.** Add Chinese comments only where they help, and keep them short.
 
 ## Common data types (from lib/model)
+
+### Visual system (desktop refresh)
+
+- `DText.title`: 20 / 600; `DText.cardTitle`: 14 / 600;
+  `DText.body`: 13 / 400; `DText.muted`: 12 / secondary. All use tabular figures.
+  Preserve the inherited `DS.font` and fallbacks; use `DefaultTextStyle.merge` only.
+- KPI rows use `DS.kpiHeight` (100). Every tile uses the neutral card surface and
+  1px border, with separate label, value and caption lines. Values/captions scale
+  down when needed rather than losing content to ellipsis. Reserve the caption
+  line even when empty, so all KPI baselines align. Accent color is a small dot.
+- `eventFill` alpha-blends course color over the card to create an **opaque**
+  fill (14% light, 22% dark). Timeline blocks use a 3px accent and measure text
+  with the inherited font and text scale. Tall blocks show title/time/location
+  on separate lines (location may wrap to two); medium blocks combine metadata;
+  short blocks show the title, adding time only when it fits. Narrow overlaps
+  reserve up to three title lines before metadata and hide time ranges too wide
+  to display. Month chips omit time when it would crowd the title.
+- Overview uses 08:00–18:00 as its minimum visible range, extending to include
+  earlier/later events; empty days show `EmptyHint`. The week view stays 08:00–22:00.
+- Homework uses `DS.homeworkRowHeight` and `DS.groupHeaderHeight`. `LayoutBuilder`
+  reserves space for a clickable “还有 N 项” footer, never a partial item or an
+  orphan group header. The footer opens all items in an internally scrolling
+  desktop dialog. `fmtDeadline`, `fmtDeadlineCountdown` and `deadlineColor` must
+  receive `store.now`; group labels stay secondary while urgency colors the countdown.
+  Rows are 42px with a course-color bar: title/countdown on the first line,
+  deadline/course on the second. The date/time has fixed intrinsic width; only
+  the course may ellipsize. 26px group headers allow at least five overview rows
+  at a 1200×820 window with the demo data.
+- Tomorrow rows give names the full flexible line; time/location share the next
+  line. Exam table rows combine date/time and put location/seat beneath the name.
+- Navigation uses an accent icon pill and subtle hover. Main/side headers share
+  `DS.topBarHeight`; cards use `DS.cardHeaderHeight`. Content stays inside fixed
+  regions; only card/dialog content may scroll.
 
 - `Period`:
   - `type` (PeriodType.classes/test/user/flow/virtual), `summary` (title), `location`, `description`, `startTime`, `endTime` (DateTime).
@@ -71,22 +105,16 @@ The shell already provides: the left navigation, a top bar (title / date / teach
 
 ### overview_screen.dart — 总览 (default page)
 
-```
-┌──────────── KPI row, height 76: 5 KpiTiles split evenly ────────────┐
-│ 下一节 (course name + "N 分钟后"/"进行中" + location) │ 五分制 │ 四分制 │ 已获学分 │ 近期考试 (count, with days to the nearest one) │
-├──────── Today (flex 3) ────────┬──────── Right column (flex 2) ────────┤
-│ DCard "今天"                    │ DCard "即将考试" (top 4, Expanded)       │
-│ Vertical timeline 08:00–22:00, │ each row: date · time · exam name · days │
-│ height = available height.     ├──────────────────────────────────────────┤
-│ Each Period is positioned as a │ DCard "明天" (tomorrow's periods,        │
-│ block by time (left color bar, │ single-line rows: time · name · location;│
-│ name, location, time). Red     │ "还有 N 项" when they don't fit)         │
-│ "now" line across. Light hour  │                                          │
-│ gridlines.                     │                                          │
-└────────────────────────────────┴──────────────────────────────────────────┘
-```
-
-- The timeline uses `LayoutBuilder` to compute pixels per minute = height / (14×60). Clamp each block to the visible range.
+- KPI row: `DS.kpiHeight`, next event (flex 2), five-point GPA, four-point GPA,
+  earned credits and upcoming homework (flex 1 each).
+- Below: today timeline (flex 3), homework and tomorrow (right column, flex 2).
+  The shell's overview side panel shows upcoming exams.
+- Today uses 08:00–18:00, extending to include earlier/later events. Empty days
+  show `EmptyHint`. Each opaque block uses the adaptive timeline layout above.
+- Tomorrow has 54px rows, with the full flexible name above time/location;
+  reserve a footer row when more items remain.
+- The timeline uses `LayoutBuilder` to compute pixels per minute = height /
+  ((endHour - startHour) × 60). Clamp each block to the visible range.
 - Blocks that overlap in time are laid out side by side in columns.
 - Clicking a block opens a `showDialog` with full details: name, time, location, description.
 
@@ -98,13 +126,14 @@ The shell already provides: the left navigation, a top bar (title / date / teach
   - 7 equal-width day columns, each with a header showing 周一 10/13, plus `specialDateOf` holiday labels;
   - today's column is highlighted.
 - The vertical axis is 08:00–22:00 and fills the available height. Periods are positioned exactly like the overview timeline.
-- Block content: name (bold), location, time. Hide what doesn't fit; never overflow.
+- Block content follows the adaptive timeline layout above; prioritize readable
+  titles in overlapping columns and separate locations when height permits.
 - Clicking a block shows the details dialog.
-- Exams (PeriodType.test) use the red style with a "考试" Pill.
+- Exams (PeriodType.test) use a red accent and an "【考试】" title prefix.
 
 ### grades_screen.dart — 成绩
 
-- KPI row (height 76), 6 tiles:
+- KPI row (`DS.kpiHeight`), 6 tiles:
   - 五分制 `gpa[0]`;
   - 四分制 `gpa[1]` (sub: 4.0 scale `gpa[2]`);
   - 百分制 `gpa[3]`;
@@ -115,7 +144,7 @@ The shell already provides: the left navigation, a top bar (title / date / teach
 - Below that, left/right split:
   - **Left, width 240:** DCard "学期", listing all `store.semesters`. Each row shows the semester's short name, its GPA (`semester.gpa[0]`) and credits. Clicking a row calls `selectSemester`. The selected row is highlighted. Use internal scrolling if there are too many rows.
   - **Right, Expanded:** DCard "{学期名} 成绩" table with a header row and these columns: 课程 / 学分 / 成绩 (original) / 百分制 / 四分制.
-    - Row height `DS.rowHeightDense`.
+    - Row height 40; shared `Pill` score chips, hover, subtle separators.
     - Sort by score, high to low.
     - If the table is longer than the card, the table body scrolls inside the card with `DScrollArea`; the header stays fixed.
     - Show `gpaIncluded == false` rows with muted text.
@@ -124,10 +153,11 @@ The shell already provides: the left navigation, a top bar (title / date / teach
 ### exams_screen.dart — 考试
 
 - Two columns side by side:
-  - **Left (flex 3):** DCard "{学期名} 考试", a table of `store.examsOf(selectedSemester)`.
-    - Columns: 日期 (fmtDate), 时间 (fmtRange), 课程, 类型 (期中/期末 Pill), 地点, 座位, 倒计时 (fmtRelative or "已结束").
+  - **Left (flex 7):** DCard "{学期名} 考试", a table of `store.examsOf(selectedSemester)`.
+    - 62px rows: combined date/time, flexible name with location/seat beneath,
+      type Pill, countdown (fmtRelative or "已结束").
     - Finished exams in muted text.
-  - **Right (flex 2):** DCard "倒计时": the next 6 of `store.upcomingExams` as large cards. Each card shows the days remaining (big number) + course name + date and time + location.
+  - **Right (flex 3):** DCard "倒计时": the next 6 of `store.upcomingExams` as neutral cards. Each shows the full course name, days remaining, date/time and location; only its content area may scroll.
 
 ### tasks_screen.dart — 任务
 

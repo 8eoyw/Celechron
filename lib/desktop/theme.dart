@@ -25,32 +25,38 @@ class DS {
 
   // 外壳尺寸
   static const double railWidth = 76;
-  static const double topBarHeight = 52;
+  static const double topBarHeight = 60;
   static const double homeworkPanelWidth = 300;
 
   // 密度：列表行高、表格行高
   static const double rowHeight = 32;
   static const double rowHeightDense = 26;
+  static const double kpiHeight = 100;
+  static const double homeworkRowHeight = 42;
+  static const double groupHeaderHeight = 26;
+  static const double timelineNarrowWidth = 120;
+  static const double cardHeaderHeight = 44;
+  static const double fsValue = 16;
 
   // 字号
-  static const double fsTitle = 18; // 页面标题
-  static const double fsCardTitle = 13.5; // 卡片标题
+  static const double fsTitle = 20; // 页面标题
+  static const double fsCardTitle = 14; // 卡片标题
   static const double fsBody = 13;
-  static const double fsSmall = 11.5;
-  static const double fsKpi = 22; // 指标数字
+  static const double fsSmall = 12;
+  static const double fsKpi = 26; // 指标数字
 
   /// 课程/科目配色（按名字哈希取色，浅色底 + 深色字）
   static const List<Color> palette = [
-    Color(0xFF4F7CFF),
-    Color(0xFF16A37F),
-    Color(0xFFF08A24),
-    Color(0xFFD9488B),
-    Color(0xFF8B5CF6),
-    Color(0xFF0EA5C6),
-    Color(0xFFCA8A04),
-    Color(0xFFE5484D),
-    Color(0xFF6366F1),
-    Color(0xFF65A30D),
+    Color(0xFF6484D8),
+    Color(0xFF46978D),
+    Color(0xFFC08768),
+    Color(0xFFB5739C),
+    Color(0xFF9680C7),
+    Color(0xFF5195B1),
+    Color(0xFF8C91BD),
+    Color(0xFFC27483),
+    Color(0xFF767CC1),
+    Color(0xFF589A92),
   ];
 
   static Color colorFor(String key) {
@@ -110,25 +116,29 @@ ThemeData buildDesktopTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
   final colors = dark
       ? const DSColors(
-          canvas: Color(0xFF16171A),
-          card: Color(0xFF1F2024),
-          border: Color(0xFF2E3036),
-          subtle: Color(0xFF292B30),
-          muted: Color(0xFF9A9CA5),
-          rail: Color(0xFF1B1C1F),
+          canvas: Color(0xFF141820),
+          card: Color(0xFF1C222D),
+          border: Color(0xFF303846),
+          subtle: Color(0xFF252D3A),
+          muted: Color(0xFFA0ADBF),
+          rail: Color(0xFF191F29),
         )
       : const DSColors(
-          canvas: Color(0xFFF4F5F7),
+          canvas: Color(0xFFF3F5F9),
           card: Color(0xFFFFFFFF),
-          border: Color(0xFFE4E6EB),
-          subtle: Color(0xFFF1F2F5),
-          muted: Color(0xFF6B7080),
-          rail: Color(0xFFFAFAFB),
+          border: Color(0xFFE2E7EF),
+          subtle: Color(0xFFF0F3F8),
+          muted: Color(0xFF69768A),
+          rail: Color(0xFFF9FAFC),
         );
   final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF4F7CFF),
+    seedColor: const Color(0xFF5265CB),
     brightness: brightness,
-  ).copyWith(surface: colors.card);
+  ).copyWith(
+    surface: colors.card,
+    primary: dark ? const Color(0xFFA2B2FF) : const Color(0xFF5265CB),
+    onSurface: dark ? const Color(0xFFE7ECF5) : const Color(0xFF202A3B),
+  );
   final base = ThemeData(
     useMaterial3: true,
     brightness: brightness,

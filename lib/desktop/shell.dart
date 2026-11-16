@@ -175,20 +175,30 @@ class _Rail extends StatelessWidget {
               message: '${_dests[i].label}  Ctrl+${i + 1}',
               preferBelow: false,
               child: DRow(
-                height: 56,
-                selected: i == index,
+                height: 64,
                 onTap: () => onSelect(i),
                 child: SizedBox(
                   width: double.infinity,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(i == index ? _dests[i].selectedIcon : _dests[i].icon,
-                          size: 22, color: i == index ? primary : colors.muted),
-                      const SizedBox(height: 3),
+                      Container(
+                          width: 40,
+                          height: 30,
+                          decoration: BoxDecoration(
+                              color: i == index
+                                  ? primary.withValues(alpha: 0.14)
+                                  : null,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Icon(
+                              i == index
+                                  ? _dests[i].selectedIcon
+                                  : _dests[i].icon,
+                              size: 20,
+                              color: i == index ? primary : colors.muted)),
+                      const SizedBox(height: DS.s1),
                       Text(_dests[i].label,
-                          style: TextStyle(
-                            fontSize: 11.5,
+                          style: DText.muted(context).copyWith(
                             color: i == index ? primary : colors.muted,
                             fontWeight: i == index
                                 ? FontWeight.w600
@@ -233,11 +243,7 @@ class _TopBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: DS.s4),
         child: Row(
           children: [
-            Text(title,
-                style: TextStyle(
-                    fontSize: DS.fsTitle,
-                    fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.onSurface)),
+            Text(title, style: DText.title(context)),
             const SizedBox(width: DS.s3),
             Text(
               '${fmtDate(store.now)}${week != null ? ' · 第 $week 周' : ''}',

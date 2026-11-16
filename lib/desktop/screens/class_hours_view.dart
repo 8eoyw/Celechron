@@ -31,7 +31,7 @@ class ClassHoursView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            height: 68,
+            height: DS.kpiHeight,
             child: Row(children: [
               Expanded(
                   child:

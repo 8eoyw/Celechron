@@ -19,17 +19,17 @@ class ExamsScreen extends StatelessWidget {
       listenable: store,
       builder: (context, _) {
         if (!store.isLoggedIn) {
-          return EmptyHint('未登录');
+          return const EmptyHint('未登录');
         }
         final semester = store.selectedSemester;
         if (semester == null) {
-          return EmptyHint('暂无学期数据');
+          return const EmptyHint('暂无学期数据');
         }
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(flex: 7, child: _examTableCard(context, semester)),
-            SizedBox(width: DS.s3),
+            const SizedBox(width: DS.s3),
             Expanded(flex: 3, child: _countdownCard(context)),
           ],
         );
@@ -42,16 +42,17 @@ class ExamsScreen extends StatelessWidget {
   Widget _examTableCard(BuildContext context, Semester semester) {
     final entries = store.examsOf(semester);
     if (entries.isEmpty) {
-      return DCard(title: semester.name + ' 考试', child: EmptyHint('暂无考试安排'));
+      return DCard(
+          title: '${semester.name} 考试', child: const EmptyHint('暂无考试安排'));
     }
     // 地点/座位多数时候尚未公布，整列为空时不占宽度，把空间留给课程名
     final showPlace = entries.any((e) => (e.exam.location ?? '').isNotEmpty);
     final showSeat = entries.any((e) => (e.exam.seat ?? '').isNotEmpty);
     return DCard(
-      title: semester.name + ' 考试',
+      title: '${semester.name} 考试',
       child: Column(
         children: [
-          _examHeader(context, showPlace, showSeat),
+          _examHeader(context),
           Expanded(
             child: DScrollArea(
               child: Column(
@@ -71,28 +72,22 @@ class ExamsScreen extends StatelessWidget {
     );
   }
 
-  Widget _examHeader(BuildContext context, bool showPlace, bool showSeat) {
-    return SizedBox(
-      height: 28,
+  Widget _examHeader(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: DS.s2),
+      decoration: BoxDecoration(
+          color: DSColors.of(context).subtle,
+          borderRadius: BorderRadius.circular(DS.radiusSm)),
       child: Row(
         children: [
-          _headerCell(context, 70, '日期'),
-          SizedBox(width: DS.s2),
-          _headerCell(context, 80, '时间'),
-          SizedBox(width: DS.s2),
+          _headerCell(context, 104, '日期 / 时间'),
+          const SizedBox(width: DS.s2),
           Expanded(child: Text('课程', style: DText.muted(context))),
-          SizedBox(width: DS.s2),
+          const SizedBox(width: DS.s2),
           _headerCell(context, 44, '类型'),
-          SizedBox(width: DS.s2),
-          if (showPlace) ...[
-            _headerCell(context, 64, '地点'),
-            SizedBox(width: DS.s2),
-          ],
-          if (showSeat) ...[
-            _headerCell(context, 36, '座位'),
-            SizedBox(width: DS.s2),
-          ],
-          _headerCell(context, 56, '倒计时'),
+          const SizedBox(width: DS.s2),
+          _headerCell(context, 64, '倒计时'),
         ],
       ),
     );
@@ -107,7 +102,7 @@ class ExamsScreen extends StatelessWidget {
   Widget _countdownCard(BuildContext context) {
     final upcoming = store.upcomingExams;
     if (upcoming.isEmpty) {
-      return DCard(title: '倒计时', child: EmptyHint('近期没有考试'));
+      return const DCard(title: '倒计时', child: EmptyHint('近期没有考试'));
     }
     final items = upcoming.length > 6 ? upcoming.take(6).toList() : upcoming;
     return DCard(
@@ -117,7 +112,7 @@ class ExamsScreen extends StatelessWidget {
           children: [
             for (final e in items)
               Padding(
-                padding: const EdgeInsets.only(bottom: DS.s3),
+                padding: const EdgeInsets.only(bottom: DS.s1),
                 child: _CountdownCard(entry: e, now: store.now),
               ),
           ],
@@ -150,34 +145,65 @@ class _ExamRow extends StatelessWidget {
     final countdown = finished ? '已结束' : fmtRelative(entry.start, now);
     final isMidterm = exam.type == ExamType.midterm;
     final typeLabel = isMidterm ? '期中' : '期末';
-    final typeColor = isMidterm ? DS.warning : DS.danger;
+    final typeColor = isMidterm
+        ? Theme.of(context).colorScheme.primary
+        : DSColors.of(context).muted;
+    final detail = [
+      if (showPlace && (exam.location ?? '').isNotEmpty) exam.location!,
+      if (showSeat && (exam.seat ?? '').isNotEmpty) '座位 ${exam.seat}',
+    ].join(' · ');
     return DRow(
-      height: DS.rowHeight,
-      child: Row(
-        children: [
-          _cell(70, fmtDate(entry.start), metaStyle),
-          _gap(),
-          _cell(80, fmtRange(entry.start, entry.end), metaStyle),
-          _gap(),
-          Expanded(
-              child: Text(exam.name,
-                  style: nameStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis)),
-          _gap(),
-          SizedBox(width: 44, child: Pill(typeLabel, color: typeColor)),
-          _gap(),
-          if (showPlace) ...[
-            _cell(64, exam.location ?? '', metaStyle),
+      height: 62,
+      child: Container(
+        decoration: BoxDecoration(
+            border: Border(
+                bottom: BorderSide(
+                    color:
+                        DSColors.of(context).border.withValues(alpha: 0.5)))),
+        child: Row(
+          children: [
+            SizedBox(
+                width: 104,
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(fmtDate(entry.start), style: metaStyle),
+                      const SizedBox(height: DS.s1),
+                      Text(fmtRange(entry.start, entry.end), style: metaStyle),
+                    ])),
             _gap(),
-          ],
-          if (showSeat) ...[
-            _cell(36, exam.seat ?? '', metaStyle),
+            Expanded(
+                child: Tooltip(
+                    message: '${exam.name}\n$detail',
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(exam.name,
+                              style: nameStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          if (detail.isNotEmpty) ...[
+                            const SizedBox(height: DS.s1),
+                            Text(detail,
+                                style: metaStyle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ],
+                        ]))),
             _gap(),
+            SizedBox(width: 44, child: Pill(typeLabel, color: typeColor)),
+            _gap(),
+            _cell(
+                64,
+                countdown,
+                finished
+                    ? metaStyle
+                    : metaStyle.copyWith(
+                        color: deadlineColor(context, entry.start, now))),
           ],
-          _cell(56, countdown,
-              finished ? metaStyle : metaStyle.copyWith(color: DS.danger)),
-        ],
+        ),
       ),
     );
   }
@@ -201,53 +227,49 @@ class _CountdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = entry.start.difference(now);
-    final days = d.inDays;
-    final color = days <= 1 ? DS.danger : (days <= 3 ? DS.warning : DS.success);
+    final days = calendarDaysBetween(now, entry.start);
+    final color = days <= 1
+        ? DS.danger
+        : (days <= 3 ? DS.warning : Theme.of(context).colorScheme.primary);
     final exam = entry.exam;
     return Container(
-      padding: const EdgeInsets.all(DS.s3),
+      padding: const EdgeInsets.all(DS.s2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: DSColors.of(context).card,
         borderRadius: BorderRadius.circular(DS.radiusSm),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: DSColors.of(context).border),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 56,
-            child: Column(
+          Text(exam.name,
+              style: DText.strong(context),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: DS.s1),
+          Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(days.toString(), style: DText.kpi(context)),
-                Text('天后', style: DText.muted(context)),
-              ],
-            ),
-          ),
-          SizedBox(width: DS.s3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(exam.name,
-                    style: DText.strong(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                Text(
-                    fmtDate(entry.start) +
-                        ' ' +
-                        fmtRange(entry.start, entry.end),
-                    style: DText.muted(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                if (exam.location != null)
-                  Text(exam.location!,
-                      style: DText.muted(context),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-              ],
-            ),
-          ),
+                Text(days <= 0 ? '今天' : '$days',
+                    style: DText.kpi(context).copyWith(color: color)),
+                if (days > 0) ...[
+                  const SizedBox(width: DS.s1),
+                  Text('天后', style: DText.muted(context))
+                ],
+                const Spacer(),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(fmtDate(entry.start), style: DText.muted(context)),
+                  Text(fmtRange(entry.start, entry.end),
+                      style: DText.muted(context)),
+                ]),
+              ]),
+          const SizedBox(height: DS.s1),
+          if (exam.location != null)
+            Text(exam.location!,
+                style: DText.muted(context),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
         ],
       ),
     );

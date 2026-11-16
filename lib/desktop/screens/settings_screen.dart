@@ -68,7 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _accountCard(context)),
-            SizedBox(width: DS.s3),
+            const SizedBox(width: DS.s3),
             Expanded(child: _rightColumn(context)),
           ],
         );
@@ -90,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Icon(Icons.account_circle_outlined,
                     size: 32, color: DSColors.of(context).muted),
-                SizedBox(width: DS.s2),
+                const SizedBox(width: DS.s2),
                 Expanded(
                     child: Text(store.username,
                         style: DText.strong(context),
@@ -98,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         overflow: TextOverflow.ellipsis)),
               ],
             ),
-            SizedBox(height: DS.s3),
+            const SizedBox(height: DS.s3),
             Row(
               children: [
                 Expanded(
@@ -106,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _actionButton(context, '立即同步', Icons.sync_outlined, () {
                   store.refresh();
                 })),
-                SizedBox(width: DS.s2),
+                const SizedBox(width: DS.s2),
                 Expanded(
                     child: _actionButton(
                         context, '退出登录', Icons.logout, _confirmLogout)),
@@ -122,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text('学号', style: DText.muted(context)),
-          SizedBox(height: DS.s1),
+          const SizedBox(height: DS.s1),
           SizedBox(
             height: 36,
             child: TextField(
@@ -131,9 +131,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: const InputDecoration(isDense: true),
             ),
           ),
-          SizedBox(height: DS.s3),
+          const SizedBox(height: DS.s3),
           Text('密码', style: DText.muted(context)),
-          SizedBox(height: DS.s1),
+          const SizedBox(height: DS.s1),
           SizedBox(
             height: 36,
             child: TextField(
@@ -145,9 +145,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_loginError != null)
             Padding(
                 padding: const EdgeInsets.only(top: DS.s2),
-                child: Text('登录失败：' + _loginError!,
+                child: Text('登录失败：$_loginError',
                     style: DText.muted(context).copyWith(color: DS.danger))),
-          SizedBox(height: DS.s3),
+          const SizedBox(height: DS.s3),
           SizedBox(
             height: 36,
             child: ElevatedButton(
@@ -172,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16),
-          SizedBox(width: DS.s1),
+          const SizedBox(width: DS.s1),
           Text(label, style: DText.body(context)),
         ],
       ),
@@ -185,7 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       children: [
         Expanded(child: _appearanceCard(context)),
-        SizedBox(height: DS.s3),
+        const SizedBox(height: DS.s3),
         _aboutCard(context),
       ],
     );
@@ -233,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : Icons.brightness_6,
             size: 18,
             color: active ? primary : muted),
-        SizedBox(width: DS.s2),
+        const SizedBox(width: DS.s2),
         Expanded(
             child: Text(label,
                 style: active ? DText.strong(context) : DText.body(context),
@@ -255,11 +255,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             children: [
               Text('Celechron 版本', style: DText.muted(context)),
-              SizedBox(width: DS.s2),
+              const SizedBox(width: DS.s2),
               Text(widget.store.fuseVersion, style: DText.strong(context)),
             ],
           ),
-          SizedBox(height: DS.s2),
+          const SizedBox(height: DS.s2),
           Text(
             'https://celechron.top',
             style: DText.body(context)

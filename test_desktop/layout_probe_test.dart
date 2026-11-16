@@ -1,5 +1,5 @@
 // 桌面版离屏版面检查（不打开窗口、不联网、不改动真实数据）：
-// 把本机 Hive 数据复制到临时目录，以 1184×781（1200×820 窗口的客户区）渲染每个页面，
+// 只複製校曆並使用虛構示範資料，以 1184×781（1200×820 視窗的客戶區）渲染每頁，
 // 报告：溢出（RenderFlex overflow）、需要滚动的滚动区域，并把每页存成 PNG。
 //
 // 运行：flutter test test_desktop/layout_probe_test.dart
@@ -23,6 +23,7 @@ import 'package:celechron/desktop/store.dart';
 import 'package:celechron/desktop/theme.dart';
 import 'package:celechron/desktop/widgets.dart';
 import 'package:celechron/page/option/option_controller.dart';
+import 'demo_data.dart';
 
 const _pages = ['总览', '课表', '成绩', '考试', '任务', '设置'];
 const _size = Size(1184, 781);
@@ -56,7 +57,7 @@ void main() {
         '${Platform.environment['USERPROFILE']}\\Documents';
     final tmp = await Directory.systemTemp.createTemp('celechron_hive_');
     for (final f in Directory(src).listSync().whereType<File>()) {
-      if (f.path.endsWith('.hive')) {
+      if (f.path.endsWith('dbuser.hive')) {
         await f.copy(
             '${tmp.path}${Platform.pathSeparator}${f.uri.pathSegments.last}');
       }
@@ -64,7 +65,27 @@ void main() {
     Hive.init(tmp.path);
     final db = Get.put(DatabaseHelper(), tag: 'db');
     await db.init();
-    Get.put((await db.getScholar()).obs, tag: 'scholar');
+    final real = await db.getScholar();
+    final calendars = <String, Map<String, dynamic>>{
+      for (final sem in real.semesters)
+        sem.name: {
+          for (final key in [
+            'sessionToTime',
+            'dayOfWeekToDays',
+            'holidays',
+            'exchanges'
+          ])
+            key: sem.toJson()[key],
+        },
+    };
+    Get.put(
+        buildDemoScholar(
+                calendars: calendars,
+                specialDates: real.specialDates.map(
+                    (key, value) => MapEntry(key.toIso8601String(), value)),
+                now: DateTime.now())
+            .obs,
+        tag: 'scholar');
     Get.put(db.getTaskList().obs, tag: 'taskList');
     Get.put(db.getTaskListUpdateTime().obs, tag: 'taskListLastUpdate');
     Get.put(db.getFlowList().obs, tag: 'flowList');
@@ -182,6 +203,11 @@ void main() {
     // ignore: avoid_print
     print(
         'PROBE out=${outDir.path}\n${problems.toSet().join('\n')}\nPROBE_END ${problems.length} items');
+    expect(
+        problems
+            .where((p) => p.startsWith('ERROR:') || p.contains('PAGE-SCROLL')),
+        isEmpty,
+        reason: problems.join('\n'));
 
     store.dispose();
     Get.deleteAll(force: true);

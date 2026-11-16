@@ -21,6 +21,9 @@ import 'package:celechron/database/database_helper.dart';
 import 'package:celechron/desktop/shell.dart';
 import 'package:celechron/desktop/store.dart';
 import 'package:celechron/desktop/theme.dart';
+import 'package:celechron/desktop/widgets.dart';
+import 'package:celechron/desktop/side_panels.dart';
+import 'package:celechron/model/period.dart';
 import 'package:celechron/page/option/option_controller.dart';
 
 import 'demo_data.dart';
@@ -42,6 +45,22 @@ Future<void> _loadFont(String family, List<String> paths) async {
 void main() {
   late DesktopStore store;
   late Directory outDir;
+
+  test('deadline calendar labels and overdue countdown', () {
+    final now = DateTime(2026, 11, 16, 12);
+    expect(fmtDeadline(DateTime(2026, 11, 16, 23, 59), now), '今天 23:59');
+    expect(fmtDeadline(DateTime(2026, 11, 17, 15, 59), now), '明天 15:59');
+    expect(fmtDeadline(DateTime(2026, 11, 18, 23, 59), now), '周三 23:59');
+    expect(fmtDeadline(DateTime(2026, 11, 23, 23, 59), now), '周一 23:59');
+    expect(fmtDeadline(DateTime(2026, 11, 28, 23, 59), now), '11/28 周六 23:59');
+    expect(
+        fmtDeadline(DateTime(2027, 1, 1, 0, 5), DateTime(2026, 12, 31, 23, 59)),
+        '明天 00:05');
+    expect(fmtDeadlineCountdown(now.subtract(const Duration(days: 2)), now),
+        '已逾期 2 天');
+    expect(fmtDeadlineCountdown(now.add(const Duration(hours: 11)), now),
+        '11 小时后');
+  });
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -135,20 +154,49 @@ void main() {
               .writeAsBytesSync(png!.buffer.asUint8List());
         });
 
+    void checkLayout() {
+      expect(tester.takeException(), isNull);
+      for (final element in find.byType(Scrollable).evaluate()) {
+        final state = (element as StatefulElement).state as ScrollableState;
+        if (!state.position.hasContentDimensions ||
+            state.position.maxScrollExtent <= 0.5) continue;
+        expect(element.findAncestorWidgetOfExactType<DScrollArea>() != null,
+            isTrue,
+            reason: 'PAGE-SCROLL');
+      }
+      for (final element in find
+          .descendant(of: find.byType(KpiTile), matching: find.byType(RichText))
+          .evaluate()) {
+        final text = element.renderObject! as RenderParagraph;
+        expect(text.didExceedMaxLines, isFalse, reason: 'KPI caption clipped');
+      }
+    }
+
     Future<void> page(int i) async {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(
           LogicalKeyboardKey(LogicalKeyboardKey.digit1.keyId + i - 1));
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
       await tester.pump(const Duration(milliseconds: 300));
+      checkLayout();
     }
 
     Future<void> tap(String text) async {
       await tester.tap(find.text(text));
       await tester.pump(const Duration(milliseconds: 300));
+      checkLayout();
     }
 
     await app(Brightness.light);
+    checkLayout();
+    void checkOverviewHomework() {
+      final rows = find.descendant(
+          of: find.byType(HomeworkList), matching: find.byType(DRow));
+      expect(rows.evaluate().length, greaterThanOrEqualTo(5),
+          reason: 'Overview must show at least five complete homework rows');
+    }
+
+    checkOverviewHomework();
     await snap('01_总览');
     await page(2);
     // 本周是国庆假期，课很少，展示下一周
@@ -170,9 +218,122 @@ void main() {
     store.selectSemester(0);
     await page(1);
     await app(Brightness.dark);
+    checkOverviewHomework();
     await snap('07_总览_深色');
     await page(2);
     await snap('08_课表_周_深色');
+    await tap('月');
+    await snap('09_课表_月_深色');
+    await tap('统计');
+    await snap('10_课表_课时统计_深色');
+    await tap('周');
+    await page(4);
+    await snap('11_考试_深色');
+    if (graded >= 0) store.selectSemester(graded);
+    await page(3);
+    await snap('12_成绩_深色');
+
+    // Footer is actionable and the complete list stays in a desktop dialog.
+    await page(1);
+    final homework = find.byType(HomeworkList);
+    final footer =
+        find.descendant(of: homework, matching: find.byType(TextButton));
+    expect(footer, findsOneWidget);
+    await tester.tap(footer);
+    await tester.pump();
+    expect(find.text('全部作业'), findsOneWidget);
+    checkLayout();
+    await tester.tap(find.text('关闭'));
+    await tester.pump();
+
+    // Every homework density has complete rows and an accurate remainder.
+    for (final height in [32.0, 96.0, 128.0, 300.0, 720.0]) {
+      final host = GlobalKey();
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: Scaffold(
+              body: Center(
+                  child: SizedBox(
+                      key: host,
+                      width: 284,
+                      height: height,
+                      child: HomeworkList(store: store))))));
+      final shown = store.todos
+          .where((t) => find.text(t.name).evaluate().isNotEmpty)
+          .length;
+      expect(find.text('还有 ${store.todos.length - shown} 项'),
+          shown < store.todos.length ? findsOneWidget : findsNothing);
+      expect(find.byType(ColorBarTile), findsNWidgets(shown));
+      final bounds = tester.getRect(find.byKey(host));
+      for (final row in find.byType(DRow).evaluate()) {
+        final rect = tester.getRect(find.byWidget(row.widget));
+        expect(rect.top >= bounds.top && rect.bottom <= bounds.bottom, isTrue,
+            reason: 'Partial homework row at height $height');
+      }
+      for (final todo in store.todos
+          .where((t) => find.text(t.name).evaluate().isNotEmpty)) {
+        final date = todo.endTime == null
+            ? '无截止时间'
+            : fmtDeadline(todo.endTime!, store.now);
+        final dateRect = tester.getRect(find.text(date));
+        expect(dateRect.left >= bounds.left && dateRect.right <= bounds.right,
+            isTrue,
+            reason: 'Deadline must stay fully visible');
+        if (todo.endTime != null) {
+          final titleRect = tester.getRect(find.text(todo.name));
+          final countdown = tester.getRect(
+              find.text(fmtDeadlineCountdown(todo.endTime!, store.now)));
+          expect(countdown.center.dy, closeTo(titleRect.center.dy, 0.5));
+          expect(countdown.right, closeTo(bounds.right - DS.s2, 0.5));
+        }
+      }
+      expect(tester.takeException(), isNull);
+    }
+
+    // Height and width determine which details fit, with title priority in overlaps.
+    final period = Period(
+        summary: '短时段课程',
+        location: '示范教室',
+        startTime: store.now,
+        endTime: store.now.add(const Duration(minutes: 30)));
+    for (final height in [22.0, 40.0, 50.0, 64.0, 100.0]) {
+      await tester.pumpWidget(MaterialApp(
+          theme: buildDesktopTheme(Brightness.light),
+          home: Scaffold(
+              body: Center(
+                  child: SizedBox(
+                      width: 300,
+                      height: height,
+                      child: TimelineBlock(period: period))))));
+      expect(find.text('短时段课程'), findsOneWidget);
+      expect(find.textContaining('示范教室'),
+          height < 44 ? findsNothing : findsOneWidget);
+      final time = fmtRange(period.startTime, period.endTime);
+      if (height >= 64) {
+        expect(find.text(time), findsOneWidget);
+        expect(find.text('示范教室'), findsOneWidget);
+      } else if (height == 40) {
+        expect(find.text(time), findsOneWidget);
+      } else if (height == 50) {
+        expect(find.text('$time · 示范教室'), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    }
+    final narrowPeriod =
+        period.copyWith(summary: '离散数学及其应用', location: '紫金港东1A-201示范教室');
+    await tester.pumpWidget(MaterialApp(
+        theme: buildDesktopTheme(Brightness.light),
+        home: Scaffold(
+            body: Center(
+                child: SizedBox(
+                    width: 80,
+                    height: 100,
+                    child: TimelineBlock(period: narrowPeriod))))));
+    final titleParagraph = tester.renderObject<RenderParagraph>(find.descendant(
+        of: find.text(narrowPeriod.summary), matching: find.byType(RichText)));
+    expect(titleParagraph.didExceedMaxLines, isFalse);
+    expect(find.text(fmtRange(period.startTime, period.endTime)), findsNothing);
+    expect(tester.takeException(), isNull);
 
     store.dispose();
     Get.deleteAll(force: true);

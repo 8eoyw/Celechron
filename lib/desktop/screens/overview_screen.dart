@@ -25,11 +25,11 @@ class OverviewScreen extends StatelessWidget {
           children: [
             // KPI 行（高度 76，5 个指标均分）
             SizedBox(
-              height: 76,
+              height: DS.kpiHeight,
               child: Row(
                 children: [
                   Expanded(flex: 2, child: _nextClassTile(context)),
-                  SizedBox(width: DS.s3),
+                  const SizedBox(width: DS.s3),
                   Expanded(
                       child: KpiTile(
                           label: '五分制',
@@ -37,36 +37,36 @@ class OverviewScreen extends StatelessWidget {
                           action: EyeToggle(
                               hidden: store.gpaHidden,
                               onTap: store.toggleGpaHidden))),
-                  SizedBox(width: DS.s3),
+                  const SizedBox(width: DS.s3),
                   Expanded(
                       child: KpiTile(
                           label: '四分制',
                           value: store.maskGpa(_f2(store.gpa[1])),
                           sub: '4.0 制 ${store.maskGpa(_f2(store.gpa[2]))}')),
-                  SizedBox(width: DS.s3),
+                  const SizedBox(width: DS.s3),
                   Expanded(
                       child: KpiTile(
                           label: '已获学分', value: _f2(store.earnedCredit))),
-                  SizedBox(width: DS.s3),
+                  const SizedBox(width: DS.s3),
                   Expanded(child: _homeworkCountTile(context)),
                 ],
               ),
             ),
-            SizedBox(height: DS.s3),
+            const SizedBox(height: DS.s3),
             Expanded(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // 今天：纵向时间轴（flex 3）
                   Expanded(flex: 3, child: _todayCard(context)),
-                  SizedBox(width: DS.s3),
+                  const SizedBox(width: DS.s3),
                   // 右栏（flex 2）：作业 + 明天；即将考试在右侧栏
                   Expanded(
                     flex: 2,
                     child: Column(
                       children: [
                         Expanded(child: _homeworkCard(context)),
-                        SizedBox(height: DS.s3),
+                        const SizedBox(height: DS.s3),
                         _tomorrowCard(context),
                       ],
                     ),
@@ -125,7 +125,7 @@ class OverviewScreen extends StatelessWidget {
         sub: soon.isEmpty
             ? '7 天内无截止'
             : fmtRelative(soon.first.endTime!, store.now),
-        color: urgent ? DS.warning : const Color(0xFF4F7CFF));
+        color: urgent ? DS.warning : Theme.of(context).colorScheme.primary);
   }
 
   // ───────────────────────── 今天（时间轴） ─────────────────────────
@@ -133,18 +133,37 @@ class OverviewScreen extends StatelessWidget {
   Widget _todayCard(BuildContext context) {
     final periods = store.todayPeriods;
     if (periods.isEmpty) {
-      return DCard(title: '今天', child: EmptyHint('今天没有安排'));
+      return const DCard(title: '今天', child: EmptyHint('今天没有安排'));
     }
+    final origin = DateTime(store.now.year, store.now.month, store.now.day);
+    final startHour = min(
+            8,
+            periods
+                .map((p) =>
+                    (p.startTime.difference(origin).inMinutes / 60).floor())
+                .reduce(min))
+        .clamp(0, 23);
+    final endHour = max(
+            18,
+            periods
+                .map(
+                    (p) => (p.endTime.difference(origin).inMinutes / 60).ceil())
+                .reduce(max))
+        .clamp(1, 24);
     return DCard(
       title: '今天',
       trailing: Text('${periods.length} 项'),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const HourAxis(),
+          HourAxis(startHour: startHour, endHour: endHour),
           Expanded(
-            child:
-                DayTimeline(day: store.now, periods: periods, now: store.now),
+            child: DayTimeline(
+                day: store.now,
+                periods: periods,
+                now: store.now,
+                startHour: startHour,
+                endHour: endHour),
           ),
         ],
       ),
@@ -169,16 +188,17 @@ class OverviewScreen extends StatelessWidget {
         .add(const Duration(days: 1));
     final periods = store.periodsOfDay(tomorrow);
     return SizedBox(
-      height: 180,
+      height: 230,
       child: DCard(
         title: '明天',
         child: periods.isEmpty
-            ? EmptyHint('明天没有安排')
+            ? const EmptyHint('明天没有安排')
             : LayoutBuilder(
                 builder: (context, c) {
                   // 计算放得下几行，多余的显示「还有 N 项」
-                  final maxRows = (c.maxHeight / DS.rowHeight).floor();
-                  final visible = min(periods.length, maxRows);
+                  final maxRows = (c.maxHeight / 54).floor();
+                  final visible = min(periods.length,
+                      periods.length > maxRows ? max(0, maxRows - 1) : maxRows);
                   final hidden = periods.length - visible;
                   final rows = <Widget>[
                     for (final p in periods.take(visible))
@@ -207,25 +227,28 @@ class _TomorrowRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DRow(
-      height: DS.rowHeight,
+      height: 54,
+      onTap: () => showPeriodDetail(context, period),
       child: Row(
         children: [
-          SizedBox(
-              width: 100,
-              child: Text(
-                  '${fmtTime(period.startTime)}–${fmtTime(period.endTime)}',
-                  style: DText.muted(context))),
-          SizedBox(width: DS.s2),
+          Container(width: 3, height: 30, color: periodColor(period)),
+          const SizedBox(width: DS.s2),
           Expanded(
-              child: Text(period.summary,
-                  style: DText.strong(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis)),
-          SizedBox(width: DS.s2),
-          Text(period.location,
-              style: DText.muted(context),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(period.summary,
+                    style: DText.strong(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: DS.s1),
+                Text(
+                    '${fmtRange(period.startTime, period.endTime)} · ${period.location}',
+                    style: DText.muted(context),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ])),
         ],
       ),
     );

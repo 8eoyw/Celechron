@@ -39,19 +39,21 @@ class SidePanel extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: DS.s4),
                   child: Row(children: [
-                    Text(title,
-                        style: TextStyle(
-                            fontSize: DS.fsTitle,
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.onSurface)),
+                    Text(title, style: DText.cardTitle(context)),
                     const SizedBox(width: DS.s2),
                     Pill('${count()}',
                         color: Theme.of(context).colorScheme.primary),
                     const Spacer(),
-                    if (extra != null) Text(extra, style: DText.muted(context)),
+                    if (extra != null)
+                      Flexible(
+                          child: Text(extra,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: DText.muted(context))),
                   ]),
                 ),
               ),
+              Divider(height: 1, color: colors.border),
               Expanded(child: child()),
             ],
           );
@@ -80,7 +82,7 @@ class HomeworkPanel extends StatelessWidget {
       );
 }
 
-/// 学在浙大作业按截止时间分组，两行紧凑显示；区域内可滚动
+/// Fit complete groups/rows, reserving a footer before adding any item.
 class HomeworkList extends StatelessWidget {
   const HomeworkList({super.key, required this.store});
   final DesktopStore store;
@@ -88,7 +90,7 @@ class HomeworkList extends StatelessWidget {
   static Color groupColor(TodoGroup g) => switch (g) {
         TodoGroup.overdue => DS.danger,
         TodoGroup.within24h => DS.warning,
-        TodoGroup.thisWeek => const Color(0xFF4F7CFF),
+        TodoGroup.thisWeek => const Color(0xFF5265CB),
         TodoGroup.later || TodoGroup.noDeadline => Colors.grey,
       };
 
@@ -98,45 +100,97 @@ class HomeworkList extends StatelessWidget {
     if (store.todos.isEmpty) {
       return const EmptyHint('没有待交作业', icon: Icons.check_circle_outline);
     }
-    return DScrollArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(DS.s2, 0, DS.s2, DS.s3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final entry in groups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(DS.s2, DS.s3, DS.s2, DS.s1),
-                child: Row(children: [
-                  Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: groupColor(entry.key),
-                          shape: BoxShape.circle)),
-                  const SizedBox(width: DS.s2),
-                  Text('${todoGroupName[entry.key]}  ${entry.value.length}',
-                      style: DText.muted(context)
-                          .copyWith(fontWeight: FontWeight.w600)),
-                ]),
-              ),
-              for (final t in entry.value)
-                _HomeworkRow(
-                    todo: t, store: store, color: groupColor(entry.key)),
-            ],
+    return LayoutBuilder(builder: (context, constraints) {
+      final rows = <Widget>[];
+      var used = 0.0;
+      var shown = 0;
+      final total = store.todos.length;
+      for (final entry in groups.entries) {
+        var first = true;
+        for (final todo in entry.value) {
+          final rowHeight =
+              homeworkRowHeightOf(context) +
+              (first ? DS.groupHeaderHeight : 0);
+          final footer = shown + 1 < total ? DS.rowHeight : 0;
+          if (used + rowHeight + footer > constraints.maxHeight) {
+            final hidden = total - shown;
+            rows.add(SizedBox(
+                height: constraints.maxHeight - used < DS.rowHeight
+                    ? constraints.maxHeight - used
+                    : DS.rowHeight,
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: DS.s2)),
+                  onPressed: () => _showAll(context),
+                  child: Text('还有 $hidden 项', style: DText.muted(context)),
+                )));
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+          }
+          if (first) {
+            rows.add(SizedBox(
+                height: DS.groupHeaderHeight,
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: DS.s2),
+                    child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                            '${todoGroupName[entry.key]}  ·  ${entry.value.length}',
+                            style: DText.muted(context)
+                                .copyWith(letterSpacing: 0.6),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis)))));
+          }
+          rows.add(_HomeworkRow(todo: todo, store: store));
+          used += rowHeight;
+          shown++;
+          first = false;
+        }
+      }
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    });
+  }
+
+  void _showAll(BuildContext context) => showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('全部作业', style: DText.title(context)),
+          content: SizedBox(
+              width: 520,
+              height: 520,
+              child: ListenableBuilder(
+                  listenable: store,
+                  builder: (context, _) => DScrollArea(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                            for (final entry in store.todosGrouped.entries) ...[
+                              SizedBox(
+                                  height: DS.groupHeaderHeight,
+                                  child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                          '${todoGroupName[entry.key]}  ·  ${entry.value.length}',
+                                          style: DText.muted(context)))),
+                              for (final todo in entry.value)
+                                _HomeworkRow(todo: todo, store: store),
+                            ]
+                          ])))),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('关闭'))
           ],
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _HomeworkRow extends StatelessWidget {
-  const _HomeworkRow(
-      {required this.todo, required this.store, required this.color});
+  const _HomeworkRow({required this.todo, required this.store});
   final Todo todo;
   final DesktopStore store;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +200,7 @@ class _HomeworkRow extends StatelessWidget {
           '${todo.course}\n${todo.name}${end != null ? '\n截止 ${fmtDate(end)} ${fmtTime(end)}' : ''}',
       waitDuration: const Duration(milliseconds: 600),
       child: DRow(
-        height: 44,
+        height: homeworkRowHeightOf(context),
         child: ColorBarTile(
           color: DS.colorFor(todo.course),
           child: Column(
@@ -159,16 +213,23 @@ class _HomeworkRow extends StatelessWidget {
                         style: DText.strong(context),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis)),
-                if (end != null)
-                  Text(fmtRelative(end, store.now),
-                      style: DText.muted(context).copyWith(color: color)),
+                if (end != null) ...[
+                  const SizedBox(width: DS.s2),
+                  Text(fmtDeadlineCountdown(end, store.now),
+                      style: DText.muted(context).copyWith(
+                          color: deadlineColor(context, end, store.now))),
+                ],
               ]),
-              Text(
-                '${todo.course}${end != null ? ' · ${fmtDate(end)} ${fmtTime(end)}' : ''}',
-                style: DText.muted(context),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              const SizedBox(height: DS.s1),
+              Row(children: [
+                Text(end == null ? '无截止时间' : fmtDeadline(end, store.now),
+                    style: DText.muted(context), maxLines: 1, softWrap: false),
+                Expanded(
+                    child: Text(' · ${todo.course}',
+                        style: DText.muted(context),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis)),
+              ]),
             ],
           ),
         ),
@@ -217,7 +278,7 @@ class UpcomingExamRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exam = entry.exam;
-    final days = entry.start.difference(now).inDays;
+    final days = calendarDaysBetween(now, entry.start);
     // 两行：侧栏较窄，单行放不下课名
     return DRow(
       height: 44,
