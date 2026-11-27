@@ -30,12 +30,15 @@ class ExamsPage extends StatelessWidget {
                 title: '考试',
                 subtitle: '${semester?.name ?? '暂无学期'} · ${exams.length} 场',
                 actions: [SemesterDropdown(store: store)]),
+            padding: const EdgeInsets.fromLTRB(28, 12, 20, 16),
             child: Align(
-                alignment: Alignment.topLeft,
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 880),
                     child: exams.isEmpty
-                        ? const EmptyState('暂无考试安排')
+                        ? const EmptyState('暂无考试安排',
+                            icon: Icons.event_note_outlined,
+                            subtitle: '本学期尚未公布考试时间表')
                         : ScrollArea(
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -91,8 +94,10 @@ class _ExamRow extends StatelessWidget {
                   width: 48 * scale,
                   height: 48 * scale,
                   decoration: BoxDecoration(
-                      color: past ? c.surface : course.tint,
-                      borderRadius: BorderRadius.circular(Paper.blockRadius)),
+                      color: past ? c.surfaceElevated : course.tint,
+                      border: Border.all(
+                          color: past ? c.hairline : course.border),
+                      borderRadius: BorderRadius.circular(10)),
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -117,15 +122,16 @@ class _ExamRow extends StatelessWidget {
                       const SizedBox(width: 8),
                       Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                              color: c.surface,
-                              border: Border.all(color: c.hairline),
+                              color: c.glassControl,
+                              border: Border.all(color: c.hairlineStrong),
                               borderRadius:
-                                  BorderRadius.circular(Paper.smallRadius)),
+                                  BorderRadius.circular(Paper.chipRadius)),
                           child: Text(
                               entry.exam.type == ExamType.midterm ? '期中' : '期末',
-                              style: PaperType.meta(context)))
+                              style: PaperType.meta(context)
+                                  .copyWith(fontSize: 11)))
                     ]),
                     const SizedBox(height: 4),
                     Text(detail,

@@ -10,6 +10,8 @@ class SemesterDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Builder(
       builder: (context) => PaperAction(
+          outlined: true,
+          borderRadius: Paper.pillRadius,
           onTap: store.semesters.isEmpty
               ? null
               : () async {
@@ -21,11 +23,13 @@ class SemesterDropdown extends StatelessWidget {
                   });
                   if (value != null) store.selectSemester(value);
                 },
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text(store.selectedSemester?.name ?? '暂无学期',
-                style: PaperType.meta(context)),
+                style: PaperType.meta(context)
+                    .copyWith(color: PaperColors.of(context).text)),
             const SizedBox(width: 4),
-            const Icon(Icons.expand_more, size: 16)
+            Icon(Icons.keyboard_arrow_down_rounded,
+                size: 16, color: PaperColors.of(context).text2)
           ])));
 }

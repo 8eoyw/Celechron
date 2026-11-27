@@ -5,7 +5,6 @@ import '../../model/todo.dart';
 import '../format.dart';
 import '../theme/tokens.dart';
 import 'countdown.dart';
-import 'course_colors.dart';
 import 'context_menu.dart';
 import 'list_row.dart';
 
@@ -48,12 +47,25 @@ class HomeworkRow extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Row(children: [
-                      Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                              color: CourseColors(context, todo.course).bar,
-                              shape: BoxShape.circle)),
+                      Builder(builder: (context) {
+                        final c = PaperColors.of(context);
+                        final end = todo.endTime;
+                        final dotColor = end == null
+                            ? c.text3
+                            : end.isBefore(now)
+                                ? c.danger
+                                : end.difference(now) <=
+                                        const Duration(hours: 24)
+                                    ? c.warning
+                                    : calendarDaysBetween(now, end) <= 7
+                                        ? c.accent
+                                        : c.text3;
+                        return Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                                color: dotColor, shape: BoxShape.circle));
+                      }),
                       const SizedBox(width: 8),
                       Expanded(
                           child: Text(todo.name,

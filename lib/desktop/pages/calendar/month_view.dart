@@ -116,7 +116,7 @@ class _MonthCell extends StatelessWidget {
                         style: PaperType.meta(context).copyWith(
                             fontWeight: FontWeight.w600,
                             color: today
-                                ? const Color(0xFFFFFFFF)
+                                ? colors.onAccent
                                 : inMonth
                                     ? colors.text
                                     : colors.text3))),

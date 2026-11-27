@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/tokens.dart';
 
-/// Common mouse/keyboard target. Keyboard focus always has a 2px accent ring.
+/// Interactive target modeled after Antigravity's flat, borderless translucent
+/// selection fills. Keyboard focus always displays a crisp accent ring.
 class PaperAction extends StatefulWidget {
   const PaperAction(
       {super.key,
@@ -9,12 +10,16 @@ class PaperAction extends StatefulWidget {
       required this.onTap,
       this.onSecondaryTapDown,
       this.selected = false,
+      this.outlined = false,
+      this.borderRadius,
       this.tooltip,
       this.padding = EdgeInsets.zero});
   final Widget child;
   final VoidCallback? onTap;
   final GestureTapDownCallback? onSecondaryTapDown;
   final bool selected;
+  final bool outlined;
+  final double? borderRadius;
   final String? tooltip;
   final EdgeInsetsGeometry padding;
   @override
@@ -26,6 +31,18 @@ class _PaperActionState extends State<PaperAction> {
   @override
   Widget build(BuildContext context) {
     final c = PaperColors.of(context);
+    final radius = widget.borderRadius ?? Paper.smallRadius;
+    final Color? fill = widget.selected
+        ? c.selectionFill
+        : hover
+            ? c.hover
+            : (widget.outlined ? c.glassControl : null);
+    final Color borderColor = focus
+        ? c.accent
+        : widget.outlined
+            ? (hover ? c.text3.withValues(alpha: .5) : c.hairlineStrong)
+            : const Color(0x00000000);
+
     Widget result = FocusableActionDetector(
       enabled: widget.onTap != null,
       mouseCursor: widget.onTap == null
@@ -44,25 +61,15 @@ class _PaperActionState extends State<PaperAction> {
           onTap: widget.onTap,
           onSecondaryTapDown: widget.onSecondaryTapDown,
           child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeOut,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOutCubic,
               padding: widget.padding,
               decoration: BoxDecoration(
-                  color: widget.selected
-                      ? c.surface
-                      : hover
-                          ? c.hover
-                          : null,
-                  borderRadius: BorderRadius.circular(6)),
+                  color: fill, borderRadius: BorderRadius.circular(radius)),
               foregroundDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(radius),
                   border: Border.all(
-                      color: focus
-                          ? c.accent
-                          : widget.selected
-                              ? c.hairline
-                              : const Color(0x00000000),
-                      width: focus ? 2 : 1)),
+                      color: borderColor, width: focus ? 1.5 : 1)),
               child: widget.child)),
     );
     if (widget.tooltip != null) {
@@ -84,9 +91,10 @@ class PaperIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PaperAction(
       tooltip: tooltip,
+      borderRadius: Paper.smallRadius,
       onTap: onPressed,
       child: SizedBox(
-          width: 30,
-          height: 30,
-          child: Icon(icon, size: 18, color: PaperColors.of(context).text2)));
+          width: 28,
+          height: 28,
+          child: Icon(icon, size: 17, color: PaperColors.of(context).text2)));
 }

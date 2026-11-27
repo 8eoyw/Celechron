@@ -42,48 +42,61 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   @override
-  Widget build(BuildContext context) => Center(
-      child: SizedBox(
-          width: 360,
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('登录 Celechron', style: PaperType.h1(context)),
-                const SizedBox(height: 24),
-                TextField(
-                    controller: user,
-                    style: PaperType.body(context),
-                    decoration: const InputDecoration(
-                        labelText: '学号',
-                        contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14)),
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.username]),
-                const SizedBox(height: 16),
-                TextField(
-                    controller: password,
-                    style: PaperType.body(context),
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                        labelText: '密码',
-                        contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 14)),
-                    onSubmitted: (_) => submit(),
-                    autofillHints: const [AutofillHints.password]),
-                const SizedBox(height: 16),
-                PaperAction(
-                    selected: true,
-                    onTap: busy ? null : submit,
-                    padding: const EdgeInsets.all(10),
-                    child: Center(
-                        child: Text(busy ? '登录中…' : '登录',
-                            style: PaperType.strong(context)))),
-                if (error != null)
-                  Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(error!,
-                          style: PaperType.meta(context)
-                              .copyWith(color: PaperColors.of(context).danger)))
-              ])));
+  Widget build(BuildContext context) {
+    final c = PaperColors.of(context);
+    return Center(
+        child: Container(
+            width: 380,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+                color: c.rail,
+                borderRadius: BorderRadius.circular(Paper.blockRadius),
+                border: Border.all(color: c.hairline)),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('登录 Celechron', style: PaperType.h1(context)),
+                  const SizedBox(height: 20),
+                  TextField(
+                      controller: user,
+                      style: PaperType.body(context),
+                      decoration: const InputDecoration(
+                          labelText: '学号',
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14)),
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.username]),
+                  const SizedBox(height: 14),
+                  TextField(
+                      controller: password,
+                      style: PaperType.body(context),
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                          labelText: '密码',
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 14)),
+                      onSubmitted: (_) => submit(),
+                      autofillHints: const [AutofillHints.password]),
+                  const SizedBox(height: 18),
+                  Container(
+                      decoration: BoxDecoration(
+                          color: busy ? c.surfaceElevated : c.text,
+                          borderRadius: BorderRadius.circular(10)),
+                      child: PaperAction(
+                          borderRadius: 10,
+                          onTap: busy ? null : submit,
+                          padding: const EdgeInsets.all(11),
+                          child: Center(
+                              child: Text(busy ? '登录中…' : '登录',
+                                  style: PaperType.strong(context).copyWith(
+                                      color: busy ? c.text2 : c.canvas))))),
+                  if (error != null)
+                    Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(error!,
+                            style: PaperType.meta(context)
+                                .copyWith(color: c.danger)))
+                ])));
+  }
 }

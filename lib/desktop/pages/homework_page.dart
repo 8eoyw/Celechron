@@ -39,6 +39,8 @@ class _HomeworkPageState extends State<HomeworkPage> {
                 actions: [
                   Builder(
                       builder: (context) => PaperAction(
+                          outlined: true,
+                          borderRadius: Paper.pillRadius,
                           onTap: () async {
                             final box =
                                 context.findRenderObject()! as RenderBox;
@@ -54,29 +56,35 @@ class _HomeworkPageState extends State<HomeworkPage> {
                             }
                           },
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 6),
+                              horizontal: 12, vertical: 5),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             ConstrainedBox(
                                 constraints:
                                     const BoxConstraints(maxWidth: 160),
                                 child: Text(selected ?? '全部课程',
-                                    style: PaperType.meta(context),
+                                    style: PaperType.meta(context).copyWith(
+                                        color: PaperColors.of(context).text),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis)),
-                            const Icon(Icons.expand_more, size: 16)
+                            const SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down_rounded,
+                                size: 16, color: PaperColors.of(context).text2)
                           ]))),
                   const SizedBox(width: 8),
                   PaperIconButton(
-                      icon: Icons.refresh,
+                      icon: Icons.refresh_rounded,
                       tooltip: '刷新作业',
                       onPressed: store.refresh)
                 ]),
+            padding: const EdgeInsets.fromLTRB(28, 12, 20, 16),
             child: Align(
-                alignment: Alignment.topLeft,
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 880),
                     child: todos.isEmpty
-                        ? const EmptyState('没有待交作业')
+                        ? const EmptyState('没有待交作业',
+                            icon: Icons.check_circle_outline_rounded,
+                            subtitle: '目前没有待提交的课程作业')
                         : HomeworkList(todos: todos, now: store.now))));
       });
 }

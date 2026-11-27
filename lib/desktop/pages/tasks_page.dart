@@ -10,7 +10,6 @@ import '../widgets/empty_state.dart';
 import '../widgets/list_row.dart';
 import '../widgets/page_header.dart';
 import '../widgets/scroll_area.dart';
-import '../widgets/section_label.dart';
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key, required this.store});
@@ -77,60 +76,123 @@ class _TasksPageState extends State<TasksPage> {
                 subtitle: '${pending.length} 项进行中',
                 actions: [
                   PaperAction(
+                      outlined: true,
+                      borderRadius: Paper.pillRadius,
                       onTap: store.isLoggedIn ? _newTask : null,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 14, vertical: 6),
                       child: Text('+ 新建', style: PaperType.strong(context)))
                 ]),
             child:
                 Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Expanded(
                   child: Column(children: [
-                SectionLabel('截止任务 · ${pending.length}'),
+                Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                        border: Border(
+                            bottom: BorderSide(
+                                color: PaperColors.of(context).hairline))),
+                    child: Row(children: [
+                      Text('截止任务', style: PaperType.cardTitle(context)),
+                      const Spacer(),
+                      Text('${pending.length} 项',
+                          style: PaperType.meta(context))
+                    ])),
                 Expanded(
-                    child: ScrollArea(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                      if (pending.isEmpty) const EmptyState('暂无待办任务'),
-                      for (final task in pending) _row(context, task),
-                      const SizedBox(height: 16),
-                      PaperAction(
-                          onTap: () => setState(
-                              () => completedExpanded = !completedExpanded),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(children: [
-                            Icon(
-                                completedExpanded
-                                    ? Icons.expand_more
-                                    : Icons.chevron_right,
-                                size: 16,
-                                color: PaperColors.of(context).text2),
-                            const SizedBox(width: 4),
-                            Text('已完成 ${finished.length}',
-                                style: PaperType.label(context))
-                          ])),
-                      if (completedExpanded) ...[
-                        if (finished.isEmpty) const EmptyState('暂无已完成任务'),
-                        for (final task in finished) _row(context, task)
-                      ]
-                    ])))
+                    child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 14, 14),
+                        child: pending.isEmpty && !completedExpanded
+                            ? Column(children: [
+                                const Expanded(
+                                    child: EmptyState('暂无待办任务',
+                                        icon: Icons.task_alt_rounded,
+                                        subtitle: '点击右上角「+ 新建」添加个人截止任务')),
+                                PaperAction(
+                                    onTap: () => setState(() =>
+                                        completedExpanded = !completedExpanded),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 8),
+                                    child: Row(children: [
+                                      Icon(Icons.chevron_right_rounded,
+                                          size: 16,
+                                          color: PaperColors.of(context).text2),
+                                      const SizedBox(width: 4),
+                                      Text('已完成 ${finished.length}',
+                                          style: PaperType.label(context))
+                                    ]))
+                              ])
+                            : ScrollArea(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                  if (pending.isEmpty)
+                                    const EmptyState('暂无待办任务', compact: true),
+                                  for (final task in pending)
+                                    _row(context, task),
+                                  const SizedBox(height: 16),
+                                  PaperAction(
+                                      onTap: () => setState(() =>
+                                          completedExpanded =
+                                              !completedExpanded),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 8),
+                                      child: Row(children: [
+                                        Icon(
+                                            completedExpanded
+                                                ? Icons.expand_more_rounded
+                                                : Icons.chevron_right_rounded,
+                                            size: 16,
+                                            color:
+                                                PaperColors.of(context).text2),
+                                        const SizedBox(width: 4),
+                                        Text('已完成 ${finished.length}',
+                                            style: PaperType.label(context))
+                                      ])),
+                                  if (completedExpanded) ...[
+                                    if (finished.isEmpty)
+                                      const EmptyState('暂无已完成任务',
+                                          compact: true),
+                                    for (final task in finished)
+                                      _row(context, task)
+                                  ]
+                                ]))))
               ])),
-              const SizedBox(width: 32),
-              VerticalDivider(
-                  width: 1, color: PaperColors.of(context).hairline),
-              const SizedBox(width: 32),
+              Container(width: 1, color: PaperColors.of(context).hairline),
               Expanded(
-                  child: Column(children: [
-                SectionLabel('固定日程 · ${fixed.length}'),
-                Expanded(
-                    child: fixed.isEmpty
-                        ? const EmptyState('暂无固定日程')
-                        : ScrollArea(
-                            child: Column(children: [
-                            for (final task in fixed) _row(context, task)
-                          ])))
-              ]))
+                  child: Container(
+                      color: PaperColors.of(context).rail,
+                      child: Column(children: [
+                        Container(
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                                border: Border(
+                                    bottom: BorderSide(
+                                        color:
+                                            PaperColors.of(context).hairline))),
+                            child: Row(children: [
+                              Text('固定日程', style: PaperType.cardTitle(context)),
+                              const Spacer(),
+                              Text('${fixed.length} 项',
+                                  style: PaperType.meta(context))
+                            ])),
+                        Expanded(
+                            child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 10, 14, 14),
+                                child: fixed.isEmpty
+                                    ? const EmptyState('暂无固定日程',
+                                        icon: Icons.event_repeat_rounded,
+                                        subtitle: '可用于添加每周例会、社团活动等重复安排')
+                                    : ScrollArea(
+                                        child: Column(children: [
+                                        for (final task in fixed)
+                                          _row(context, task)
+                                      ]))))
+                      ])))
             ]));
       });
 

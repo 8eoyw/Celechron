@@ -93,7 +93,8 @@ Future<DesktopStore> setupDemo() async {
   Get.put(db.getOption(), tag: 'option');
   Get.put(db.getFuse().obs, tag: 'fuse');
   Get.put(OptionController(), tag: 'optionController');
-  await loadFont(Paper.font, 'C:/Windows/Fonts/msyh.ttc');
+  await loadFont(Paper.font, 'C:/Windows/Fonts/segoeui.ttf');
+  await loadFont('Microsoft YaHei UI', 'C:/Windows/Fonts/msyh.ttc');
   final sdk = Platform.environment['FLUTTER_ROOT'] ?? 'D:/dev/flutter';
   await loadFont('MaterialIcons',
       '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf');

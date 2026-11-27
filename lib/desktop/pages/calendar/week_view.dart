@@ -10,7 +10,8 @@ import '../../widgets/homework_row.dart';
 import '../../widgets/list_row.dart';
 import '../../widgets/popover.dart';
 
-const _gutter = 52.0;
+const _gutterBase = 56.0;
+const _topPad = 10.0;
 
 class CalendarWeekView extends StatefulWidget {
   const CalendarWeekView(
@@ -62,8 +63,8 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
         if (!end.isAfter(start)) continue;
         final a = start.difference(day).inMinutes.toDouble();
         final b = end.difference(day).inMinutes.toDouble();
-        firstMinute = math.min(firstMinute, a.floor() - 60);
-        lastMinute = math.max(lastMinute, b.ceil() + 60);
+        firstMinute = math.min(firstMinute, a.floor());
+        lastMinute = math.max(lastMinute, b.ceil() + 30);
         dayEntries.add(_PlacedPeriod(p, a, b));
       }
       _placeOverlaps(dayEntries);
@@ -71,6 +72,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
     }
     final startHour = (firstMinute / 60).floor().clamp(0, 8);
     final endHour = (lastMinute / 60).ceil().clamp(18, 24);
+    final gutter = _gutterBase * scale;
     final headerHeight = 60.0 * scale;
     final laneHeight =
         deadlineRows == 0 ? 0.0 : deadlineRows * 26.0 * scale + 8;
@@ -78,7 +80,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
       SizedBox(
           height: headerHeight,
           child: Row(children: [
-            const SizedBox(width: _gutter),
+            SizedBox(width: gutter),
             for (final day in days) Expanded(child: _dayHeader(context, day))
           ])),
       if (deadlineRows > 0)
@@ -87,7 +89,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
             child:
                 Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               SizedBox(
-                  width: _gutter,
+                  width: gutter,
                   child: Center(
                       child: Text('截止', style: PaperType.meta(context)))),
               for (var i = 0; i < 7; i++)
@@ -115,8 +117,8 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
             ])),
       Expanded(child: LayoutBuilder(builder: (context, bounds) {
         final hourHeight = math.max(
-            44.0 * scale, (bounds.maxHeight - 20) / (endHour - startHour));
-        final gridHeight = (endHour - startHour) * hourHeight + 20;
+            44.0 * scale, (bounds.maxHeight - _topPad * 2) / (endHour - startHour));
+        final gridHeight = (endHour - startHour) * hourHeight + _topPad * 2;
         final range =
             '${widget.monday}|$startHour|$endHour|${bounds.maxHeight}|$scale';
         if (_positionedRange != range) {
@@ -132,7 +134,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
           final nowVisible = today >= 0 &&
               nowMinute >= startHour * 60 &&
               nowMinute <= endHour * 60;
-          double top(double m) => (m / 60 - startHour) * hourHeight;
+          double top(double m) => _topPad + (m / 60 - startHour) * hourHeight;
           final fromEarliest = top(earliest) - 8;
           final minute = !nowVisible ||
                   top(nowMinute) - fromEarliest < bounds.maxHeight - 60
@@ -157,16 +159,19 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             SizedBox(
-                                width: _gutter,
+                                width: gutter,
                                 child: Stack(children: [
                                   for (var hour = startHour;
                                       hour <= endHour;
                                       hour++)
                                     Positioned(
-                                        top:
-                                            (hour - startHour) * hourHeight + 3,
-                                        left: 5,
+                                        top: _topPad +
+                                            (hour - startHour) * hourHeight -
+                                            7.5 * scale,
+                                        left: 0,
+                                        width: gutter - 8,
                                         child: Text('${two(hour)}:00',
+                                            textAlign: TextAlign.right,
                                             style: PaperType.meta(context)
                                                 .copyWith(fontSize: 11.5)))
                                 ])),
@@ -184,7 +189,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
       calendarDaysBetween(day, widget.store.now) == 0
           ? Color.alphaBlend(
               PaperColors.of(context).accent.withValues(alpha: .04),
-              PaperColors.of(context).surface)
+              PaperColors.of(context).canvas)
           : null;
 
   Widget _dayHeader(BuildContext context, DateTime day) {
@@ -208,8 +213,8 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
                         color: colors.accent, shape: BoxShape.circle)
                     : null,
                 child: Text('${day.day}',
-                    style: PaperType.h2(context).copyWith(
-                        color: today ? const Color(0xFFFFFFFF) : null)))
+                    style: PaperType.h2(context)
+                        .copyWith(color: today ? colors.onAccent : null)))
           ]),
           if (special != null)
             Text(special,
@@ -226,10 +231,11 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
               color: PaperColors.of(context).accentSoft,
-              borderRadius: BorderRadius.circular(6)),
+              borderRadius: BorderRadius.circular(Paper.chipRadius)),
           child: PaperAction(
+              borderRadius: Paper.chipRadius,
               onTap: () => openHomework(todo),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 5),
               child: Row(children: [
                 Icon(Icons.edit_outlined,
                     size: 12, color: PaperColors.of(context).accent),
@@ -289,17 +295,19 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
             builder: (context, bounds) => Stack(children: [
                   for (var half = startHour * 2; half <= endHour * 2; half++)
                     Positioned(
-                        top: (half / 2 - startHour) * hourHeight,
+                        top: _topPad + (half / 2 - startHour) * hourHeight,
                         left: 0,
                         right: 0,
                         child: Container(
                             height: 1,
                             color: half.isEven
-                                ? colors.hairline
-                                : colors.hairline.withValues(alpha: .5))),
+                                ? colors.gridHour
+                                : colors.gridHalf)),
                   for (final entry in entries)
                     Positioned(
-                        top: (entry.start / 60 - startHour) * hourHeight + 1,
+                        top: _topPad +
+                            (entry.start / 60 - startHour) * hourHeight +
+                            1,
                         left:
                             bounds.maxWidth * entry.column / entry.columns + 2,
                         width: math.max(1, bounds.maxWidth / entry.columns - 4),
@@ -308,7 +316,7 @@ class _CalendarWeekViewState extends State<CalendarWeekView> {
                         child: _EventBlock(period: entry.period)),
                   if (showNow)
                     Positioned(
-                        top: (nowMinute / 60 - startHour) * hourHeight - 3,
+                        top: _topPad + (nowMinute / 60 - startHour) * hourHeight - 3,
                         left: 0,
                         right: 0,
                         child: IgnorePointer(
@@ -403,16 +411,28 @@ class _EventBlockState extends State<_EventBlock> {
                         ? Color.alphaBlend(
                             colors.text.withValues(alpha: .04), tint)
                         : tint,
-                    borderRadius: BorderRadius.circular(6)),
+                    borderRadius: BorderRadius.circular(Paper.smallRadius),
+                    border: exam
+                        ? Border.all(
+                            color: colors.danger.withValues(alpha: .32),
+                            width: 1)
+                        : _hover
+                            ? Border.all(color: course.border, width: 1)
+                            : null),
                 child: Stack(children: [
                   Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(width: 3, color: bar)),
+                      left: 4,
+                      top: 6,
+                      bottom: 6,
+                      child: Container(
+                          width: 3,
+                          decoration: BoxDecoration(
+                              color: bar,
+                              borderRadius: BorderRadius.circular(1.5)))),
                   Positioned.fill(
                       child: Builder(
                           builder: (context) => PaperAction(
+                              borderRadius: 8,
                               onTap: () => showPeriodPopover(context, period),
                               child: LayoutBuilder(builder: (context, bounds) {
                                 final h = bounds.maxHeight / scale;
@@ -427,7 +447,7 @@ class _EventBlockState extends State<_EventBlock> {
                                 return ClipRect(
                                     child: Padding(
                                         padding: EdgeInsets.fromLTRB(
-                                            8, padding, 6, padding),
+                                            11, padding, 6, padding),
                                         child: SingleChildScrollView(
                                             physics:
                                                 const NeverScrollableScrollPhysics(),

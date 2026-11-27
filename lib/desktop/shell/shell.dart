@@ -59,6 +59,10 @@ class _DesktopShellState extends State<DesktopShell>
     fade.forward(from: 0);
   }
 
+  void toggleSidebar() {
+    setState(() => manualCollapsed = !(manualCollapsed ?? wasNarrow ?? false));
+  }
+
   Future<void> search() async {
     if (paletteOpen) {
       Navigator.of(context).pop();
@@ -109,8 +113,7 @@ class _DesktopShellState extends State<DesktopShell>
         return true;
       }
       if (key == LogicalKeyboardKey.backslash) {
-        setState(
-            () => manualCollapsed = !(manualCollapsed ?? wasNarrow ?? false));
+        toggleSidebar();
         return true;
       }
     }
@@ -147,13 +150,13 @@ class _DesktopShellState extends State<DesktopShell>
                   selected: page,
                   onNavigate: navigate,
                   onSearch: search,
+                  onToggleCollapse: toggleSidebar,
                   onOpenDay: (date) {
                     final mounted = calendar.currentState;
                     navigate(DesktopPage.calendar);
                     if (mounted != null) {
                       mounted.openDay(date);
                     } else {
-                      // 日程页尚未建立：等它挂载后再跳转，并确保会有下一帧
                       WidgetsBinding.instance.addPostFrameCallback(
                           (_) => calendar.currentState?.openDay(date));
                       WidgetsBinding.instance.ensureVisualUpdate();

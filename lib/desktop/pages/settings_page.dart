@@ -35,8 +35,9 @@ class SettingsPage extends StatelessWidget {
       builder: (context, _) => PaperPage(
           store: store,
           header: const PageHeader(title: '设置'),
+          padding: const EdgeInsets.fromLTRB(28, 16, 28, 20),
           child: Align(
-              alignment: Alignment.topLeft,
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 640),
                   child: Column(
@@ -52,16 +53,17 @@ class SettingsPage extends StatelessWidget {
                         Align(
                             alignment: Alignment.centerLeft,
                             child: PaperAction(
+                                borderRadius: Paper.pillRadius,
                                 onTap: () => _logout(context),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
                                 child: Text('退出登录',
                                     style: PaperType.meta(context).copyWith(
                                         color:
                                             PaperColors.of(context).danger)))),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         const Divider(),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         const SectionLabel('外观'),
                         _row(
                             context,
@@ -74,14 +76,15 @@ class SettingsPage extends StatelessWidget {
                                 },
                                 value: store.brightnessMode,
                                 onChanged: store.setBrightnessMode)),
-                        const SizedBox(height: 24),
-                        const Divider(),
                         const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 12),
                         const SectionLabel('成绩'),
                         _row(
                             context,
                             '首页隐藏 GPA',
                             PaperAction(
+                                borderRadius: Paper.pillRadius,
                                 onTap: store.toggleGpaHidden,
                                 tooltip: '首页隐藏 GPA',
                                 child: SizedBox(
@@ -92,9 +95,9 @@ class SettingsPage extends StatelessWidget {
                                             value: store.gpaHidden,
                                             onChanged: (_) =>
                                                 store.toggleGpaHidden()))))),
-                        const SizedBox(height: 24),
-                        const Divider(),
                         const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 12),
                         const SectionLabel('关于'),
                         _row(context, 'Celechron',
                             Text('1.3.1', style: PaperType.meta(context))),
@@ -106,12 +109,13 @@ class SettingsPage extends StatelessWidget {
                         Align(
                             alignment: Alignment.centerLeft,
                             child: PaperAction(
+                                borderRadius: Paper.pillRadius,
                                 onTap: () => launchUrl(
                                     Uri.parse(
                                         'https://github.com/Celechron/Celechron'),
                                     mode: LaunchMode.externalApplication),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
                                 child: Text('GitHub ↗',
                                     style: PaperType.meta(context).copyWith(
                                         color:

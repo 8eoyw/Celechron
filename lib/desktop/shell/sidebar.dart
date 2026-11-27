@@ -13,104 +13,221 @@ class DesktopSidebar extends StatelessWidget {
       required this.selected,
       required this.onNavigate,
       required this.onSearch,
-      required this.onOpenDay});
+      this.onToggleCollapse,
+      this.onOpenDay});
   final DesktopStore store;
   final bool collapsed;
   final DesktopPage selected;
   final ValueChanged<DesktopPage> onNavigate;
   final VoidCallback onSearch;
-  final ValueChanged<DateTime> onOpenDay;
+  final VoidCallback? onToggleCollapse;
+  final ValueChanged<DateTime>? onOpenDay;
+
   @override
   Widget build(BuildContext context) {
     final c = PaperColors.of(context);
+    final exams = store.isLoggedIn ? store.upcomingExams : const <ExamEntry>[];
+    final topBarH = MediaQuery.textScalerOf(context)
+        .scale(Paper.topBarHeight)
+        .clamp(Paper.topBarHeight, double.infinity);
+
     return Container(
-        width: collapsed ? 60 : 232,
-        decoration: BoxDecoration(
-            color: c.sidebar,
-            border: Border(right: BorderSide(color: c.hairline))),
-        padding:
-            EdgeInsets.symmetric(horizontal: collapsed ? 8 : 16, vertical: 16),
+        width: collapsed ? 56 : 218,
+        color: c.sidebar,
+        padding: EdgeInsets.fromLTRB(
+            collapsed ? 8 : 10, 0, collapsed ? 8 : 10, 10),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // Top 46px chrome bar — pixel-aligned with PageHeader on the right.
           SizedBox(
-              height: 32,
+              height: topBarH,
               child: collapsed
-                  ? Tooltip(
-                      message: 'Celechron',
-                      child: Icon(Icons.auto_stories_outlined,
-                          size: 22, color: c.text2))
-                  : Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text('Celechron', style: PaperType.h2(context)))),
+                  ? Center(
+                      child: PaperIconButton(
+                          icon: Icons.view_sidebar_outlined,
+                          tooltip: '展开侧栏 · Ctrl \\',
+                          onPressed: onToggleCollapse))
+                  : Row(children: [
+                      const SizedBox(width: 8),
+                      Icon(Icons.auto_stories_outlined,
+                          size: 17, color: c.text),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text('Celechron',
+                              style: PaperType.h2(context),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis)),
+                      PaperIconButton(
+                          icon: Icons.view_sidebar_outlined,
+                          tooltip: '收起侧栏 · Ctrl \\',
+                          onPressed: onToggleCollapse),
+                      PaperIconButton(
+                          icon: Icons.search_rounded,
+                          tooltip: '搜索 · Ctrl K',
+                          onPressed: onSearch)
+                    ])),
+          const SizedBox(height: 2),
+          // Antigravity-style translucent quick-action search pill.
+          if (collapsed)
+            PaperIconButton(
+                icon: Icons.search_rounded,
+                tooltip: '搜索 · Ctrl K',
+                onPressed: onSearch)
+          else
+            Container(
+                decoration: BoxDecoration(
+                    color: c.glassControl,
+                    borderRadius: BorderRadius.circular(Paper.smallRadius)),
+                child: PaperAction(
+                    onTap: onSearch,
+                    borderRadius: Paper.smallRadius,
+                    child: SizedBox(
+                        height: 32,
+                        child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Row(children: [
+                              Icon(Icons.search_rounded,
+                                  size: 15, color: c.text3),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: Text('快速搜索',
+                                      style: PaperType.meta(context)
+                                          .copyWith(color: c.text2))),
+                              Text('Ctrl K',
+                                  style: PaperType.meta(context).copyWith(
+                                      fontSize: 11, color: c.text3))
+                            ]))))),
           const SizedBox(height: 12),
-          PaperAction(
-              onTap: onSearch,
-              tooltip: collapsed ? '搜索 · Ctrl K' : null,
-              selected: true,
-              child: SizedBox(
-                  height: 30,
-                  child: Row(
-                      mainAxisAlignment: collapsed
-                          ? MainAxisAlignment.center
-                          : MainAxisAlignment.start,
-                      children: [
-                        if (!collapsed) const SizedBox(width: 8),
-                        Icon(Icons.search, size: 16, color: c.text3),
-                        if (!collapsed) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                              child: Text('搜索',
-                                  style: PaperType.meta(context)
-                                      .copyWith(color: c.text3))),
-                          Text('Ctrl K',
-                              style: PaperType.meta(context)
-                                  .copyWith(color: c.text3)),
-                          const SizedBox(width: 8)
-                        ]
-                      ]))),
-          const SizedBox(height: 16),
           for (final page
               in DesktopPage.values.where((p) => p != DesktopPage.settings))
             Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.only(bottom: 2),
                 child: _nav(context, page)),
-          // 迷你月历放不下（矮窗口或文字放大）时整块隐藏，不让侧栏溢出
+          // Lower-left sidebar: Antigravity-style single-line upcoming exams list.
           Expanded(
-              child: collapsed
+              child: collapsed || exams.isEmpty
                   ? const SizedBox.shrink()
-                  : LayoutBuilder(
-                      builder: (context, constraints) => constraints
-                                  .maxHeight >=
-                              MediaQuery.textScalerOf(context).scale(16 + 236)
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 16),
-                              child: Align(
-                                  alignment: Alignment.topCenter,
-                                  child: MiniCalendar(
-                                      store: store, onOpenDay: onOpenDay)))
-                          : const SizedBox.shrink())),
-          const Divider(),
-          const SizedBox(height: 12),
-          if (!collapsed && store.teachingWeek != null)
-            Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 4),
-                child: Text('第 ${store.teachingWeek} 周',
-                    style: PaperType.meta(context))),
-          _sync(context),
-          const SizedBox(height: 8),
+                  : LayoutBuilder(builder: (context, bounds) {
+                      final scale = MediaQuery.textScalerOf(context).scale(1);
+                      final rowH = 30.0 * scale;
+                      final headerH = 24.0 * scale;
+                      final avail = bounds.maxHeight - headerH - 20;
+                      final maxRows = (avail / rowH)
+                          .floor()
+                          .clamp(0, exams.length)
+                          .clamp(0, 6);
+                      if (maxRows <= 0) return const SizedBox.shrink();
+                      final clipped = exams.length > maxRows;
+                      Widget list = Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final exam in exams.take(maxRows))
+                              _examItem(context, exam, c, rowH)
+                          ]);
+                      if (clipped) {
+                        list = ShaderMask(
+                            blendMode: BlendMode.dstIn,
+                            shaderCallback: (rect) => const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    stops: [0.0, 0.78, 1.0],
+                                    colors: [
+                                      Color(0xFFFFFFFF),
+                                      Color(0xFFFFFFFF),
+                                      Color(0x33FFFFFF)
+                                    ]).createShader(rect),
+                            child: list);
+                      }
+                      return Padding(
+                          padding: const EdgeInsets.only(top: 18),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 10, right: 6, bottom: 4),
+                                    child: Text('近期考试',
+                                        style: PaperType.label(context)
+                                            .copyWith(fontSize: 11))),
+                                list
+                              ]));
+                    })),
+          // Persistent compact GPA summary in lower-left (when logged in & expanded).
+          if (!collapsed && store.isLoggedIn && store.earnedCredit > 0) ...[
+            const SizedBox(height: 6),
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                    color: c.glassControl,
+                    borderRadius: BorderRadius.circular(Paper.smallRadius)),
+                child: Row(children: [
+                  Expanded(
+                      child: Text(
+                          'GPA ${store.maskGpa(store.gpa[0].toStringAsFixed(2))} · ${store.earnedCredit.toStringAsFixed(0)} 学分',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: PaperType.meta(context)
+                              .copyWith(fontSize: 11.5, color: c.text2))),
+                  PaperIconButton(
+                      icon: store.gpaHidden
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      tooltip: '显示或隐藏 GPA',
+                      onPressed: store.toggleGpaHidden)
+                ])),
+          ],
+          const SizedBox(height: 6),
+          if (!collapsed) _sync(context),
+          const SizedBox(height: 2),
           _nav(context, DesktopPage.settings),
-          if (!collapsed && store.username.isNotEmpty)
-            Padding(
-                padding: const EdgeInsets.only(left: 8, top: 8),
-                child: Text(store.username,
-                    style: PaperType.meta(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis)),
         ]));
+  }
+
+  Widget _examItem(
+      BuildContext context, ExamEntry entry, PaperColors c, double height) {
+    final days = calendarDaysBetween(store.now, entry.start);
+    final badgeColor = days <= 1
+        ? c.danger
+        : days <= 3
+            ? c.warning
+            : c.text3;
+    return PaperAction(
+        onTap: () => onNavigate(DesktopPage.exams),
+        borderRadius: Paper.smallRadius,
+        tooltip:
+            '${entry.exam.name}\n${fmtDate(entry.start)} ${fmtRange(entry.start, entry.end)}${entry.exam.location == null ? '' : ' · ${entry.exam.location}'}',
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SizedBox(
+            height: height,
+            child: Row(children: [
+              Expanded(
+                  child: Text(entry.exam.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: PaperType.meta(context)
+                          .copyWith(fontSize: 12.5, color: c.text2))),
+              const SizedBox(width: 8),
+              Text(examCountdown(entry.start, store.now),
+                  style: PaperType.meta(context).copyWith(
+                      fontSize: 11.5,
+                      fontWeight:
+                          days <= 3 ? FontWeight.w600 : FontWeight.w400,
+                      color: badgeColor))
+            ])));
+  }
+
+  Color _syncDotColor(PaperColors c) {
+    if (store.lastErrors.isNotEmpty) return c.danger;
+    if (store.refreshing) return c.warning;
+    if (!store.isLoggedIn) return c.text3;
+    return c.success;
   }
 
   Widget _nav(BuildContext context, DesktopPage page) {
     final c = PaperColors.of(context);
+    final active = selected == page;
     final count = page == DesktopPage.homework
         ? store.todos.length
         : page == DesktopPage.exams
@@ -120,33 +237,63 @@ class DesktopSidebar extends StatelessWidget {
             : 0;
     final overdue = page == DesktopPage.homework &&
         store.todos.any((t) => t.endTime?.isBefore(store.now) ?? false);
+    final isSettings = page == DesktopPage.settings;
+    final tip = collapsed
+        ? '${page.label}${count > 0 ? ' · $count' : ''}${isSettings && store.username.isNotEmpty ? ' · ${store.username}' : ''}'
+        : (isSettings && store.username.isNotEmpty
+            ? '账号 ${store.username}'
+            : null);
     return PaperAction(
         onTap: () => onNavigate(page),
-        tooltip:
-            collapsed ? '${page.label}${count > 0 ? ' · $count' : ''}' : null,
-        selected: selected == page,
+        tooltip: tip,
+        selected: active,
+        borderRadius: Paper.smallRadius,
         child: SizedBox(
             height: 32,
             child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 8),
+                padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 10),
                 child: Row(
                     mainAxisAlignment: collapsed
                         ? MainAxisAlignment.center
                         : MainAxisAlignment.start,
                     children: [
-                      Icon(page.icon, size: 18, color: c.text2),
+                      if (collapsed && isSettings)
+                        Stack(clipBehavior: Clip.none, children: [
+                          Icon(page.icon,
+                              size: 16,
+                              color: active ? c.selectionInk : c.text2),
+                          Positioned(
+                              right: -2,
+                              top: -2,
+                              child: Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _syncDotColor(c))))
+                        ])
+                      else
+                        Icon(page.icon,
+                            size: 16,
+                            color: active ? c.selectionInk : c.text2),
                       if (!collapsed) ...[
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                             child: Text(page.label,
                                 style: PaperType.body(context).copyWith(
-                                    fontWeight: selected == page
-                                        ? FontWeight.w600
-                                        : FontWeight.w500))),
+                                    fontSize: 13,
+                                    color: active ? c.selectionInk : c.text2,
+                                    fontWeight: active
+                                        ? FontWeight.w500
+                                        : FontWeight.w400))),
                         if (count > 0)
                           Text('$count',
                               style: PaperType.meta(context).copyWith(
-                                  color: overdue ? c.danger : c.text2))
+                                  fontSize: 11.5,
+                                  fontWeight: overdue
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: overdue ? c.danger : c.text3))
                       ]
                     ]))));
   }
@@ -166,129 +313,31 @@ class DesktopSidebar extends StatelessWidget {
     final dot = Container(
         width: 6,
         height: 6,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: failed
-                ? c.danger
-                : store.refreshing
-                    ? c.warning
-                    : !store.isLoggedIn
-                        ? c.text2
-                        : c.success));
+        decoration:
+            BoxDecoration(shape: BoxShape.circle, color: _syncDotColor(c)));
     return Tooltip(
         message: failed ? store.lastErrors.join('\n') : label,
-        child: collapsed
-            ? PaperAction(
-                onTap: store.refresh,
-                child: SizedBox(height: 28, child: Center(child: dot)))
-            : Row(children: [
-                const SizedBox(width: 8),
-                if (store.refreshing && !failed)
-                  SizedBox(
-                      width: 10,
-                      height: 10,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 1.5, color: c.warning))
-                else
-                  dot,
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(label,
-                        style: PaperType.meta(context)
-                            .copyWith(color: failed ? c.danger : null),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis)),
-                PaperIconButton(
-                    icon: Icons.refresh,
-                    tooltip: '刷新 · F5',
-                    onPressed: store.refresh)
-              ]));
-  }
-}
-
-class MiniCalendar extends StatefulWidget {
-  const MiniCalendar({super.key, required this.store, required this.onOpenDay});
-  final DesktopStore store;
-  final ValueChanged<DateTime> onOpenDay;
-  @override
-  State<MiniCalendar> createState() => _MiniCalendarState();
-}
-
-class _MiniCalendarState extends State<MiniCalendar> {
-  late DateTime month = DateTime(widget.store.now.year, widget.store.now.month);
-  @override
-  Widget build(BuildContext context) {
-    final c = PaperColors.of(context);
-    final first = DesktopStore.mondayOf(month);
-    return Column(children: [
-      Row(children: [
-        Expanded(
-            child: Text('${month.year}年${month.month}月',
-                style: PaperType.meta(context))),
-        PaperIconButton(
-            icon: Icons.chevron_left,
-            tooltip: '上个月',
-            onPressed: () =>
-                setState(() => month = DateTime(month.year, month.month - 1))),
-        PaperIconButton(
-            icon: Icons.chevron_right,
-            tooltip: '下个月',
-            onPressed: () =>
-                setState(() => month = DateTime(month.year, month.month + 1)))
-      ]),
-      const SizedBox(height: 4),
-      Row(children: [
-        for (final day in '一二三四五六日'.split(''))
+        child: Row(children: [
+          const SizedBox(width: 10),
+          if (store.refreshing && !failed)
+            SizedBox(
+                width: 10,
+                height: 10,
+                child: CircularProgressIndicator(
+                    strokeWidth: 1.5, color: c.warning))
+          else
+            dot,
+          const SizedBox(width: 8),
           Expanded(
-              child: Center(child: Text(day, style: PaperType.meta(context))))
-      ]),
-      const SizedBox(height: 4),
-      for (var week = 0; week < 6; week++)
-        Row(children: [
-          for (var day = 0; day < 7; day++)
-            Expanded(
-                child:
-                    _day(context, first.add(Duration(days: week * 7 + day)), c))
-        ])
-    ]);
+              child: Text(label,
+                  style: PaperType.meta(context).copyWith(
+                      fontSize: 11.5, color: failed ? c.danger : c.text3),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis)),
+          PaperIconButton(
+              icon: Icons.refresh_rounded,
+              tooltip: '刷新 · F5',
+              onPressed: store.refresh)
+        ]));
   }
-
-  Widget _day(BuildContext context, DateTime date, PaperColors c) {
-    final today = calendarDaysBetween(widget.store.now, date) == 0;
-    final homework = widget.store.todosOn(date).isNotEmpty;
-    final exam = widget.store.examsOn(date).isNotEmpty;
-    return PaperAction(
-        onTap: () => widget.onOpenDay(date),
-        tooltip: fmtDate(date),
-        child: SizedBox(
-            height: 26,
-            child: Column(children: [
-              Container(
-                  width: 19,
-                  height: 19,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: today ? c.accent : null),
-                  child: Text('${date.day}',
-                      style: PaperType.meta(context).copyWith(
-                          fontSize: 12,
-                          height: 1.2,
-                          color: today
-                              ? const Color(0xFFFFFFFF)
-                              : date.month != month.month
-                                  ? c.text3
-                                  : c.text2))),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                if (homework) _dot(c.accent),
-                if (exam) _dot(c.danger)
-              ])
-            ])));
-  }
-
-  Widget _dot(Color color) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 1),
-      child: Container(
-          width: 3,
-          height: 3,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: color)));
 }

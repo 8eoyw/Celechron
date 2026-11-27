@@ -38,14 +38,25 @@ class GradesPage extends StatelessWidget {
                     onPressed: store.toggleGpaHidden)
               ]),
           child: Column(children: [
-            _summary(context),
-            const SizedBox(height: 24),
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                    border: Border(
+                        bottom:
+                            BorderSide(color: PaperColors.of(context).hairline))),
+                child: _summary(context)),
             Expanded(
                 child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                  SizedBox(width: 240, child: _semesters(context)),
-                  const SizedBox(width: 32),
+                  Container(
+                      width: 244,
+                      color: PaperColors.of(context).rail,
+                      padding: const EdgeInsets.fromLTRB(14, 12, 10, 14),
+                      child: _semesters(context)),
+                  Container(
+                      width: 1, color: PaperColors.of(context).hairline),
                   Expanded(child: _table(context))
                 ]))
           ])));
@@ -92,10 +103,10 @@ class GradesPage extends StatelessWidget {
     final semesters = store.semesters;
     final trend = semesters.reversed.where((s) => s.grades.isNotEmpty).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const SectionLabel('学期'),
+      const CardHeader('学期'),
       Expanded(
           child: semesters.isEmpty
-              ? const EmptyState('暂无学期数据')
+              ? const EmptyState('暂无学期数据', compact: true)
               : ScrollArea(
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -168,36 +179,33 @@ class GradesPage extends StatelessWidget {
         final result = b.fivePoint.compareTo(a.fivePoint);
         return result == 0 ? b.hundredPoint.compareTo(a.hundredPoint) : result;
       });
-    final c = PaperColors.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SectionLabel(
-          semester == null ? '成绩' : '${semester.name} · ${grades.length} 门'),
+      Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
+          child: CardHeader(semester == null ? '成绩' : semester.name,
+              trailing:
+                  Text('${grades.length} 门', style: PaperType.meta(context)))),
       Expanded(
-          child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                  color: c.surface,
-                  border: Border.all(color: c.hairline),
-                  borderRadius: BorderRadius.circular(Paper.blockRadius)),
-              child: grades.isEmpty
-                  ? const EmptyState('暂无成绩数据')
-                  : LayoutBuilder(builder: (context, bounds) {
-                      final width = math.max(560.0, bounds.maxWidth);
-                      return SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                              width: width,
-                              height: bounds.maxHeight,
-                              child: Column(children: [
-                                _GradeHeader(),
-                                Expanded(
-                                    child: ScrollArea(
-                                        child: Column(children: [
-                                  for (final grade in grades)
-                                    _GradeRow(grade: grade, store: store)
-                                ])))
-                              ])));
-                    })))
+          child: grades.isEmpty
+              ? const EmptyState('暂无成绩数据',
+                  icon: Icons.school_outlined, subtitle: '该学期尚未录入成绩')
+              : LayoutBuilder(builder: (context, bounds) {
+                  final width = math.max(560.0, bounds.maxWidth);
+                  return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                          width: width,
+                          height: bounds.maxHeight,
+                          child: Column(children: [
+                            _GradeHeader(),
+                            Expanded(
+                                child: ScrollArea(
+                                    child: Column(children: [
+                              for (final grade in grades)
+                                _GradeRow(grade: grade, store: store)
+                            ])))
+                          ])));
+                }))
     ]);
   }
 }
@@ -233,15 +241,15 @@ class _GradeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = PaperColors.of(context);
     final excluded = !grade.gpaIncluded;
-    final color = store.gpaHidden || excluded
+    final neutralBand =
+        !store.gpaHidden && !excluded && grade.hundredPoint >= 80 && grade.hundredPoint < 90;
+    final color = store.gpaHidden || excluded || neutralBand
         ? c.text2
         : grade.hundredPoint >= 90
             ? c.success
-            : grade.hundredPoint >= 80
-                ? c.accent
-                : grade.hundredPoint >= 70
-                    ? c.warning
-                    : c.danger;
+            : grade.hundredPoint >= 70
+                ? c.warning
+                : c.danger;
     final style =
         PaperType.body(context).copyWith(color: excluded ? c.text2 : c.text);
     final numbers = [
@@ -278,14 +286,19 @@ class _GradeRow extends StatelessWidget {
                                 ? Center(
                                     child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
+                                            horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                            color: Color.alphaBlend(
-                                                color.withValues(
-                                                    alpha: c.dark ? .18 : .10),
-                                                c.surface),
+                                            color: store.gpaHidden ||
+                                                    excluded ||
+                                                    neutralBand
+                                                ? c.glassControl
+                                                : Color.alphaBlend(
+                                                    color.withValues(
+                                                        alpha:
+                                                            c.dark ? .18 : .12),
+                                                    c.surface),
                                             borderRadius: BorderRadius.circular(
-                                                Paper.smallRadius)),
+                                                Paper.chipRadius)),
                                         child: Text(numbers[i],
                                             style: PaperType.meta(context)
                                                 .copyWith(color: color),

@@ -136,41 +136,40 @@ class CalendarPageState extends State<CalendarPage> {
                   }, value: _view, onChanged: _setView),
                   const SizedBox(width: 12),
                   PaperIconButton(
-                      icon: Icons.chevron_left,
+                      icon: Icons.chevron_left_rounded,
                       tooltip: hours ? '上一学期' : '上一页（←）',
                       onPressed: hours &&
                               store.selectedSemesterIndex >=
                                   store.semesters.length - 1
                           ? null
                           : () => _step(-1)),
+                  const SizedBox(width: 4),
                   PaperAction(
+                      outlined: true,
+                      borderRadius: Paper.pillRadius,
                       onTap: _goToday,
                       tooltip: '回到今天（T）',
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 6),
-                      child: Text('今天', style: PaperType.meta(context))),
+                          horizontal: 12, vertical: 5),
+                      child: Text('今天',
+                          style: PaperType.meta(context)
+                              .copyWith(color: PaperColors.of(context).text))),
+                  const SizedBox(width: 4),
                   PaperIconButton(
-                      icon: Icons.chevron_right,
+                      icon: Icons.chevron_right_rounded,
                       tooltip: hours ? '下一学期' : '下一页（→）',
                       onPressed: hours && store.selectedSemesterIndex <= 0
                           ? null
                           : () => _step(1))
                 ]),
-            child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                    color: PaperColors.of(context).surface,
-                    borderRadius: BorderRadius.circular(Paper.blockRadius),
-                    border:
-                        Border.all(color: PaperColors.of(context).hairline)),
-                child: switch (_view) {
-                  _CalendarView.week => CalendarWeekView(
-                      key: ValueKey(monday), monday: monday, store: store),
-                  _CalendarView.month => CalendarMonthView(
-                      month: DateTime(_anchor.year, _anchor.month),
-                      store: store,
-                      onOpenDay: openDay),
-                  _CalendarView.hours => CalendarHoursView(store: store),
-                }));
+            child: switch (_view) {
+              _CalendarView.week => CalendarWeekView(
+                  key: ValueKey(monday), monday: monday, store: store),
+              _CalendarView.month => CalendarMonthView(
+                  month: DateTime(_anchor.year, _anchor.month),
+                  store: store,
+                  onOpenDay: openDay),
+              _CalendarView.hours => CalendarHoursView(store: store),
+            });
       });
 }
