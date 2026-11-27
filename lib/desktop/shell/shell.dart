@@ -285,6 +285,7 @@ class _TopAppBar extends StatelessWidget {
     final c = DesktopColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasError = store.lastErrors.isNotEmpty;
+    final hasWarning = !hasError && store.lastWarnings.isNotEmpty;
     final liveTerm = store.scholar.thisSemester.name;
     final semName = liveTerm.isNotEmpty
         ? liveTerm
@@ -377,8 +378,14 @@ class _TopAppBar extends StatelessWidget {
               onTap: () => showSyncStatusDialog(context, store),
               tooltip: hasError
                   ? '同步异常：${store.lastErrors.first}'
-                  : '同步状态 · ${updatedAgo(store.lastRefreshAt, store.now)}',
-              backgroundColor: hasError ? c.dangerFill : Colors.transparent,
+                  : hasWarning
+                      ? '部分模块使用缓存：${store.lastWarnings.first}'
+                      : '同步状态 · ${updatedAgo(store.lastRefreshAt, store.now)}',
+              backgroundColor: hasError
+                  ? c.dangerFill
+                  : hasWarning
+                      ? c.warningFill
+                      : Colors.transparent,
               borderRadius: DesktopRadius.chip,
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               child: Row(
@@ -397,9 +404,15 @@ class _TopAppBar extends StatelessWidget {
                     Icon(
                       hasError
                           ? Icons.cloud_off_rounded
-                          : Icons.cloud_done_outlined,
+                          : hasWarning
+                              ? Icons.cloud_queue_rounded
+                              : Icons.cloud_done_outlined,
                       size: 16,
-                      color: hasError ? c.danger : c.text2,
+                      color: hasError
+                          ? c.danger
+                          : hasWarning
+                              ? c.warning
+                              : c.text2,
                     ),
                   const SizedBox(width: 6),
                   Text(
@@ -407,9 +420,15 @@ class _TopAppBar extends StatelessWidget {
                         ? '同步中'
                         : hasError
                             ? '同步失败'
-                            : updatedAgo(store.lastRefreshAt, store.now),
+                            : hasWarning
+                                ? '已用缓存'
+                                : updatedAgo(store.lastRefreshAt, store.now),
                     style: DesktopType.caption(context, numeric: true).copyWith(
-                      color: hasError ? c.danger : c.text2,
+                      color: hasError
+                          ? c.danger
+                          : hasWarning
+                              ? c.warning
+                              : c.text2,
                     ),
                   ),
                 ],

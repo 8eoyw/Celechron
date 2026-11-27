@@ -19,11 +19,51 @@ class TimeConfigService {
     _db = db;
   }
 
+  static String _localDayStamp(DateTime now) =>
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+      '${now.day.toString().padLeft(2, '0')}';
+
   Future<Tuple3<Exception?, String?, DataSourceStatus>> getConfig(
-      HttpClient httpClient, String semesterId) async {
+    HttpClient httpClient,
+    String semesterId, {
+    bool preferCache = false,
+    bool isFuture = false,
+  }) async {
     final key = calendarObjectKeyForSemester(semesterId);
     final uri = calendarConfigUriForSemester(semesterId);
     final context = '校历接口（学年学期 $semesterId，请求类型 配置）';
+
+    // 已结束学年的校历不会再变：本地已有合法精确缓存时直接命中，避免重复请求。
+    if (preferCache) {
+      final exactCache = _db?.getCachedWebPage('timeConfig_$semesterId');
+      if (exactCache != null) {
+        try {
+          decodeAndValidateCalendarConfig(
+            exactCache,
+            context: '$context 本地缓存',
+          );
+          return Tuple3(null, exactCache, DataSourceStatus.live);
+        } on Object {
+          // 缓存损坏时继续走网络拉取。
+        }
+      }
+    }
+
+    // 未来学期若今天已确认远程未发布，当日不再重复请求 404/NoSuchKey。
+    final unpubStampKey = 'timeConfig_${semesterId}_unpubOn';
+    if (isFuture &&
+        _db?.getCachedWebPage(unpubStampKey) ==
+            _localDayStamp(DateTime.now())) {
+      final fallback = _fallbackConfig(semesterId, context);
+      return Tuple3(
+        CalendarConfigUnavailableException(
+          details: '未来学期 $semesterId 今日已确认未发布，跳过重复请求',
+        ),
+        fallback.config,
+        fallback.status,
+      );
+    }
+
     if (kDebugMode) {
       debugPrint('校历请求：URL=$uri，OSS Key=$key');
     }
@@ -45,6 +85,10 @@ class TimeConfigService {
           body.contains('<Code>NoSuchKey</Code>');
 
       if (noSuchKey) {
+        if (isFuture) {
+          await _db?.setCachedWebPage(
+              unpubStampKey, _localDayStamp(DateTime.now()));
+        }
         // 未发布与网络故障分开记录；前者是未来学期的正常状态。
         final fallback = _fallbackConfig(semesterId, context);
         DiagnosticLogService.instance.record(

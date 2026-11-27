@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
+import 'package:celechron/http/spider.dart';
+import 'package:celechron/http/zjuServices/exceptions.dart';
 import 'package:celechron/model/exam.dart';
 import 'package:celechron/model/grade.dart';
 import 'package:celechron/model/option.dart';
@@ -93,6 +95,8 @@ class DesktopStore extends ChangeNotifier {
 
   /// [autoRefresh] 为 false 时不在启动时联网（离屏版面检查用）
   void start({bool autoRefresh = true}) {
+    // 桌面版只同步实际展示的数据（跳过素质拓展与本科生研究生院探针）
+    scholar.desktopLeanMode = true;
     _workers
       ..add(ever(_scholar, (_) => notifyListeners()))
       ..add(ever(_taskList, (_) => notifyListeners()))
@@ -128,20 +132,39 @@ class DesktopStore extends ChangeNotifier {
   bool refreshing = false;
   DateTime? lastRefreshAt;
 
-  /// 最近一次刷新失败/降级的模块说明（为空表示全部成功）
+  /// 最近一次刷新真正失败的模块说明（为空表示无致命失败）
   List<String> lastErrors = const [];
+
+  /// 最近一次刷新发生缓存降级的温和提示（不视为「同步失败」）
+  List<String> lastWarnings = const [];
+
+  /// 各顶层抓取模块的实时状态（校历 / 课表 / 考试 / 成绩 / 主修 / 作业）
+  List<ModuleFetchStatus> moduleStatuses = const [];
 
   /// 刷新全部数据；并发调用会复用数据层的同一次刷新
   Future<void> refresh({bool startup = false}) async {
     if (!isLoggedIn || refreshing) return;
+    scholar.desktopLeanMode = true;
     refreshing = true;
     notifyListeners();
     if (startup) GlobalStatus.isFirstScreenReq = true;
     try {
-      final results = await scholar.refresh(onPartialUpdate: _scholar.refresh);
-      lastErrors = results.whereType<String>().toList();
+      final results = await scholar.refresh(
+        onPartialUpdate: _scholar.refresh,
+        onFetchStatus: (statuses) {
+          moduleStatuses = statuses;
+          notifyListeners();
+        },
+      );
+      final nonNull = results.whereType<String>().toList();
+      lastWarnings =
+          nonNull.where(isDegradedRefreshText).map(shortErrorText).toList();
+      lastErrors = nonNull
+          .where((e) => !isDegradedRefreshText(e))
+          .map(shortErrorText)
+          .toList();
     } on Object catch (e) {
-      lastErrors = ['$e'];
+      lastErrors = [shortErrorText(e)];
     } finally {
       if (startup) GlobalStatus.isFirstScreenReq = false;
       refreshing = false;

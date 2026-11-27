@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:celechron/http/retry_helper.dart';
 import 'package:celechron/http/spider.dart';
+import 'package:celechron/http/zju_network.dart';
 import 'package:celechron/http/calendar_config_parser.dart';
 import 'package:celechron/http/data_source_status.dart';
 import 'package:celechron/http/time_config_service.dart';
@@ -32,6 +33,7 @@ class GrsSpider implements Spider {
   late GrsNew _grsNew;
   late Courses _courses;
   late TimeConfigService _timeConfigService;
+  bool _preferDirectForZju = true;
   DateTime _lastUpdateTime = DateTime(0);
   Future<List<String?>>? _reloginFuture;
   int _loginGeneration = 0;
@@ -67,14 +69,8 @@ class GrsSpider implements Spider {
     _password = password;
   }
 
-  HttpClient _createHttpClient() {
-    final client = HttpClient();
-    // TCP/TLS 建连快速失败；已建立连接仍由各接口的总超时兜底。
-    client.connectionTimeout = const Duration(seconds: 5);
-    client.userAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.63";
-    return client;
-  }
+  HttpClient _createHttpClient() =>
+      ZjuNetwork.createClient(preferDirectForZju: _preferDirectForZju);
 
   @override
   set db(DatabaseHelper? db) {
@@ -99,15 +95,20 @@ class GrsSpider implements Spider {
     }
   }
 
-  Future<List<String?>> _doLogin({bool retryOnSsoRejection = true}) async {
+  Future<List<String?>> _doLogin({
+    bool retryOnSsoRejection = true,
+    bool retryOnRouteFailure = true,
+  }) async {
     // 候选客户端完成各子站登录后再替换，避免失败登录污染旧会话。
     final previousClient = _httpClient;
     final candidateClient = _createHttpClient();
 
     var loginErrorMessages = <String?>[null];
+    Object? ssoError;
     final candidateSsoCookie =
         await ZjuAm.getSsoCookie(candidateClient, _username, _password)
             .catchError((Object error, StackTrace stackTrace) {
+      ssoError = error;
       loginErrorMessages[0] = exceptionFrom(
         error,
         context: "无法登录统一身份认证",
@@ -117,6 +118,15 @@ class GrsSpider implements Spider {
     });
     if (candidateSsoCookie == null) {
       candidateClient.close(force: true);
+      if (retryOnRouteFailure &&
+          ssoError != null &&
+          ZjuNetwork.isRouteTransportError(ssoError!)) {
+        _preferDirectForZju = !_preferDirectForZju;
+        return _doLogin(
+          retryOnSsoRejection: retryOnSsoRejection,
+          retryOnRouteFailure: false,
+        );
+      }
       return loginErrorMessages;
     }
     Future<String?> captureLogin(Future<dynamic> future, String serviceName,
@@ -329,8 +339,14 @@ class GrsSpider implements Spider {
     while (
         yearEnroll <= currentAcademicYearStart && yearEnroll <= yearGraduate) {
       var queryAcademicYear = '$yearEnroll-${yearEnroll + 1}';
+      final preferCalendarCache = yearEnroll < currentAcademicYearStart;
       semesterConfigFetches.add(_timeConfigService
-          .getConfig(_httpClient, '$queryAcademicYear-1')
+          .getConfig(
+        _httpClient,
+        '$queryAcademicYear-1',
+        preferCache: preferCalendarCache,
+        isFuture: isFutureSemester('$queryAcademicYear-1', now),
+      )
           .then((value) {
         // 未开学学期的配置未发布是预期状态，单独计数，不计入降级。
         final expectedUnpublished =
@@ -380,7 +396,12 @@ class GrsSpider implements Spider {
               _describeRefreshFailure(error, stackTrace,
                   source: 'semesterConf($queryAcademicYear-1)')));
       semesterConfigFetches.add(_timeConfigService
-          .getConfig(_httpClient, '$queryAcademicYear-2')
+          .getConfig(
+        _httpClient,
+        '$queryAcademicYear-2',
+        preferCache: preferCalendarCache,
+        isFuture: isFutureSemester('$queryAcademicYear-2', now),
+      )
           .then((value) {
         // 未开学学期的配置未发布是预期状态，单独计数，不计入降级。
         final expectedUnpublished =

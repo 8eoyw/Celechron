@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:celechron/database/database_helper.dart';
 import 'package:celechron/http/data_source_status.dart';
+import 'package:celechron/http/zju_network.dart';
 import 'package:celechron/http/zjuServices/exceptions.dart';
 import 'package:celechron/services/diagnostic_log_service.dart';
 import 'package:celechron/utils/tuple.dart';
@@ -37,7 +38,9 @@ Uri? coursesMetaRefreshTarget(String body, Uri source) {
 
 /// 学在浙大客户端；手动跟随 SSO 跳转并维护业务 SESSION，失败时回退作业缓存。
 class Courses {
-  static final Uri _todoUri = Uri.parse("https://courses.zju.edu.cn/api/todos");
+  // 参考 zju-learning-cli：带 no-intercept=true 避免前端拦截重定向返回 HTML。
+  static final Uri _todoUri =
+      Uri.parse("https://courses.zju.edu.cn/api/todos?no-intercept=true");
 
   DatabaseHelper? _db;
   Cookie? _session;
@@ -139,25 +142,36 @@ class Courses {
     bool relogged = false,
     bool retried = false,
   }) async {
-    final request = await _createTodoRequest(httpClient);
-    final response = await request.close().timeout(const Duration(seconds: 8),
-        onTimeout: () => throw requestTimeout());
-    final body = await readResponseText(
-      response,
-      context: '学在浙大作业接口',
-      expectJson: true,
-      requestUri: _todoUri,
-      relogged: relogged,
-      retried: retried,
-    );
-    final data =
-        decodeJsonMap(body, context: '学在浙大作业接口；HTTP ${response.statusCode}');
-    if (jsonIndicatesAuthenticationFailure(data)) {
-      throw AuthenticationExpiredException(
-          '学在浙大作业接口：登录态已失效；HTTP ${response.statusCode}'
-          '；响应摘要：${responseSummary(body)}');
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final request = await _createTodoRequest(httpClient);
+      final response = await request.close().timeout(const Duration(seconds: 8),
+          onTimeout: () => throw requestTimeout());
+      if ((response.statusCode == HttpStatus.tooManyRequests ||
+              response.statusCode == HttpStatus.serviceUnavailable) &&
+          attempt < 2) {
+        await response.drain<void>();
+        await Future<void>.delayed(
+            ZjuNetwork.rateLimitDelay(response, attempt));
+        continue;
+      }
+      final body = await readResponseText(
+        response,
+        context: '学在浙大作业接口',
+        expectJson: true,
+        requestUri: _todoUri,
+        relogged: relogged,
+        retried: retried || attempt > 0,
+      );
+      final data =
+          decodeJsonMap(body, context: '学在浙大作业接口；HTTP ${response.statusCode}');
+      if (jsonIndicatesAuthenticationFailure(data)) {
+        throw AuthenticationExpiredException(
+            '学在浙大作业接口：登录态已失效；HTTP ${response.statusCode}'
+            '；响应摘要：${responseSummary(body)}');
+      }
+      return data;
     }
-    return data;
+    throw ExceptionWithMessage('学在浙大作业接口：服务器限流，请稍后重试');
   }
 
   Future<HttpClientRequest> _createTodoRequest(HttpClient httpClient) async {

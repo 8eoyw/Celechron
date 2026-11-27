@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:celechron/http/spider.dart';
 import 'package:celechron/model/option.dart';
 import '../format.dart';
 import '../store.dart';
@@ -196,8 +197,9 @@ Future<void> showSyncStatusDialog(BuildContext context, DesktopStore store) =>
           builder: (context, _) {
             final c = DesktopColors.of(context);
             final hasErrors = store.lastErrors.isNotEmpty;
+            final hasWarnings = store.lastWarnings.isNotEmpty;
             return SizedBox(
-              width: 420,
+              width: 440,
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -209,9 +211,15 @@ Future<void> showSyncStatusDialog(BuildContext context, DesktopStore store) =>
                         Icon(
                           hasErrors
                               ? Icons.cloud_off_rounded
-                              : Icons.cloud_done_outlined,
+                              : hasWarnings
+                                  ? Icons.cloud_queue_rounded
+                                  : Icons.cloud_done_outlined,
                           size: 19,
-                          color: hasErrors ? c.danger : c.success,
+                          color: hasErrors
+                              ? c.danger
+                              : hasWarnings
+                                  ? c.warning
+                                  : c.success,
                         ),
                         const SizedBox(width: 8),
                         Text('同步状态', style: DesktopType.title(context)),
@@ -222,7 +230,40 @@ Future<void> showSyncStatusDialog(BuildContext context, DesktopStore store) =>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 6),
+                    Text(
+                      '精简桌面同步：仅拉取课表、考试、成绩与学在浙大作业（直连校园网优先，自动回退代理）',
+                      style: DesktopType.caption(context),
+                    ),
+                    if (store.moduleStatuses.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final m in store.moduleStatuses)
+                            ConcentricTag(
+                              label: switch (m.state) {
+                                FetchModuleState.success => '${m.label} ✓',
+                                FetchModuleState.pending => '${m.label} …',
+                                FetchModuleState.failed => '${m.label} !',
+                              },
+                              foreground: switch (m.state) {
+                                FetchModuleState.success => c.success,
+                                FetchModuleState.pending => c.primary,
+                                FetchModuleState.failed => c.danger,
+                              },
+                              background: switch (m.state) {
+                                FetchModuleState.success => c.successFill,
+                                FetchModuleState.pending => c.selectedFill,
+                                FetchModuleState.failed => c.dangerFill,
+                              },
+                              radius: DesktopRadius.tag,
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
                     _SettingRow(
                       label: '最近一次全量同步',
                       trailing: Text(
@@ -251,8 +292,24 @@ Future<void> showSyncStatusDialog(BuildContext context, DesktopStore store) =>
                         style: DesktopType.meta(context, numeric: true),
                       ),
                     ),
+                    if (hasWarnings) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: c.warningFill,
+                          borderRadius:
+                              BorderRadius.circular(DesktopRadius.block),
+                        ),
+                        child: Text(
+                          store.lastWarnings.join('\n'),
+                          style: DesktopType.caption(context)
+                              .copyWith(color: c.warning),
+                        ),
+                      ),
+                    ],
                     if (hasErrors) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(

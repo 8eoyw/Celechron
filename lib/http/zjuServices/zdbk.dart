@@ -156,9 +156,11 @@ class Zdbk {
       bool expectJson = true,
       bool relogged = false,
       bool retried = false}) {
-    // 教务网用 9xx 非标准状态码表示限频（921 "请求过于频繁"、922 并发被拒等），
+    // 教务网用 9xx 非标准状态码（921/922）以及 429/503 表示限频或瞬时过载，
     // 由 _withSitePermit 统一退避重试
-    if (response.statusCode >= 900 && response.statusCode <= 999) {
+    if ((response.statusCode >= 900 && response.statusCode <= 999) ||
+        response.statusCode == HttpStatus.tooManyRequests ||
+        response.statusCode == HttpStatus.serviceUnavailable) {
       _throttledDuringAction = true;
     }
     try {
@@ -550,6 +552,7 @@ class Zdbk {
       {bool preferCache = false}) async {
     final cacheKey = 'zdbk_Timetable$year$semester';
     final emptyStampKey = '${cacheKey}_emptyOn';
+    final finishedEmptyKey = '${cacheKey}_finishedEmpty';
     final isFuture =
         isFutureSemester('$year-${semester.substring(0, 1)}', DateTime.now());
 
@@ -558,6 +561,9 @@ class Zdbk {
       if (cached.data.isNotEmpty &&
           _cachedAfterAcademicYear(cached.cachedAt, year)) {
         return Tuple(null, _parseSessions(cached.data, '教务网课表缓存'));
+      }
+      if (!isFuture && _db?.getCachedWebPage(finishedEmptyKey) == '1') {
+        return Tuple(null, <Session>[]);
       }
     }
     // 未开学的学期当天已确认为空就不再重复请求；当前学期不受此限，
@@ -651,6 +657,10 @@ class Zdbk {
             if (isFuture) {
               await _db?.setCachedWebPage(
                   emptyStampKey, _localDayStamp(DateTime.now()));
+            } else if (preferCache &&
+                _cachedAfterAcademicYear(
+                    DateTime.now().toUtc().toIso8601String(), year)) {
+              await _db?.setCachedWebPage(finishedEmptyKey, '1');
             }
             final cached = _cachedList(cacheKey, '$context 缓存');
             if (cached.data.isNotEmpty) {

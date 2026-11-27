@@ -30,6 +30,9 @@ class Scholar {
 
   // 登录状态
   bool isLogan = false;
+
+  /// 桌面端精简同步模式：跳过桌面端不展示的素质拓展平台与本科生研究生院探针。
+  bool desktopLeanMode = false;
   DateTime lastUpdateTimeGrade = DateTime.parse("20010101");
   DateTime lastUpdateTimeCourse = DateTime.parse("20010101");
   DateTime lastUpdateTimeHomework = DateTime.parse("20010101");
@@ -145,7 +148,12 @@ class Scholar {
     if (username == '3200000000') {
       _spider = MockSpider();
     } else if (!isGrs) {
-      _spider = UgrsSpider(username!, password!);
+      _spider = UgrsSpider(
+        username!,
+        password!,
+        includePractice: !desktopLeanMode,
+        probeGraduate: !desktopLeanMode,
+      );
     } else {
       _spider = GrsSpider(username!, password!);
     }

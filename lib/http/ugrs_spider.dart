@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:celechron/http/retry_helper.dart';
+import 'package:celechron/http/zju_network.dart';
 import 'package:celechron/http/zjuServices/courses.dart';
 import 'package:celechron/http/calendar_config_parser.dart';
 import 'package:celechron/http/data_source_status.dart';
@@ -35,6 +36,9 @@ class UgrsSpider implements Spider {
   late Sztz _sztz;
   late GrsNew _grsNew;
   late TimeConfigService _timeConfigService;
+  final bool _includePractice;
+  final bool _probeGraduate;
+  bool _preferDirectForZju = true;
   DateTime _lastUpdateTime = DateTime(0);
   bool fetchGrs = false;
   Map<String, double>? _practiceScores;
@@ -64,10 +68,26 @@ class UgrsSpider implements Spider {
     '实践'
   ];
 
-  @override
-  List<String> get fetchLabels => fetchSequence;
+  static const List<String> fetchSequenceLean = [
+    '校历',
+    '课表',
+    '考试',
+    '成绩',
+    '主修',
+    '作业',
+  ];
 
-  UgrsSpider(String username, String password) {
+  @override
+  List<String> get fetchLabels =>
+      _includePractice ? fetchSequence : fetchSequenceLean;
+
+  UgrsSpider(
+    String username,
+    String password, {
+    bool includePractice = true,
+    bool probeGraduate = true,
+  })  : _includePractice = includePractice,
+        _probeGraduate = probeGraduate {
     _httpClient = _createHttpClient();
     _courses = Courses();
     _zdbk = Zdbk();
@@ -78,17 +98,10 @@ class UgrsSpider implements Spider {
     _password = password;
   }
 
-  // 初始化或重置 HttpClient
-  HttpClient _createHttpClient() {
-    final client = HttpClient();
-    // TCP/TLS 建连快速失败；已建立连接仍由各接口的总超时兜底。
-    client.connectionTimeout = const Duration(seconds: 5);
-    client.userAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.63";
-    // 强制不保存 Cookies，完全由 Zdbk 手动管理，避免冲突
-    // 同时也避免重定向时 HttpClient 自动携带旧 Cookie
-    return client;
-  }
+  // 初始化或重置 HttpClient：参考 zju-learning-cli，对 *.zju.edu.cn 优先直连，
+  // 遇到传输错误时自动切换系统代理重试。
+  HttpClient _createHttpClient() =>
+      ZjuNetwork.createClient(preferDirectForZju: _preferDirectForZju);
 
   @override
   set db(DatabaseHelper? db) {
@@ -113,7 +126,10 @@ class UgrsSpider implements Spider {
     }
   }
 
-  Future<List<String?>> _doLogin({bool retryOnSsoRejection = true}) async {
+  Future<List<String?>> _doLogin({
+    bool retryOnSsoRejection = true,
+    bool retryOnRouteFailure = true,
+  }) async {
     fetchGrs = false;
     // 所有子站完成本轮登录尝试后才整体替换旧客户端，
     // 避免登录过程中业务请求混用两套连接状态。
@@ -121,9 +137,11 @@ class UgrsSpider implements Spider {
     final candidateClient = _createHttpClient();
 
     var loginErrorMessages = <String?>[null];
+    Object? ssoError;
     final candidateSsoCookie =
         await ZjuAm.getSsoCookie(candidateClient, _username, _password)
             .catchError((Object error, StackTrace stackTrace) {
+      ssoError = error;
       loginErrorMessages[0] = exceptionFrom(
         error,
         context: "无法登录统一身份认证",
@@ -133,6 +151,22 @@ class UgrsSpider implements Spider {
     });
     if (candidateSsoCookie == null) {
       candidateClient.close(force: true);
+      if (retryOnRouteFailure &&
+          ssoError != null &&
+          ZjuNetwork.isRouteTransportError(ssoError!)) {
+        _preferDirectForZju = !_preferDirectForZju;
+        DiagnosticLogService.instance.record(
+          level: CelechronLogLevel.warning,
+          module: '本科生登录',
+          operation: 'flipRoute',
+          message: '统一身份认证传输失败，切换为${_preferDirectForZju ? '直连校园网' : '系统代理'}重试',
+          retried: true,
+        );
+        return _doLogin(
+          retryOnSsoRejection: retryOnSsoRejection,
+          retryOnRouteFailure: false,
+        );
+      }
       return loginErrorMessages;
     }
     Future<String?> captureLogin(Future<dynamic> future, String serviceName,
@@ -155,12 +189,15 @@ class UgrsSpider implements Spider {
     final serviceErrors = await Future.wait<String?>([
       captureLogin(_courses.login(candidateClient, candidateSsoCookie), "学在浙大"),
       captureLogin(_zdbk.login(candidateClient, candidateSsoCookie), "教务网"),
-      captureLogin(_sztz.login(candidateClient, candidateSsoCookie), "素质拓展平台",
-          ignoreError: true),
-      captureLogin(_grsNew.login(candidateClient, candidateSsoCookie), "研究生院网",
-          onSuccess: () {
-        fetchGrs = true;
-      }, ignoreError: true),
+      if (_includePractice)
+        captureLogin(_sztz.login(candidateClient, candidateSsoCookie), "素质拓展平台",
+            ignoreError: true),
+      if (_probeGraduate)
+        captureLogin(
+            _grsNew.login(candidateClient, candidateSsoCookie), "研究生院网",
+            onSuccess: () {
+          fetchGrs = true;
+        }, ignoreError: true),
     ]);
     loginErrorMessages.addAll(serviceErrors);
 
@@ -179,7 +216,10 @@ class UgrsSpider implements Spider {
         retried: true,
       );
       candidateClient.close(force: true);
-      return _doLogin(retryOnSsoRejection: false);
+      return _doLogin(
+        retryOnSsoRejection: false,
+        retryOnRouteFailure: retryOnRouteFailure,
+      );
     }
 
     if (serviceErrors.every((error) => error == null)) {
@@ -252,9 +292,9 @@ class UgrsSpider implements Spider {
     }
   }
 
-  // 对元组内返回的会话错误进行一次单飞重登；瞬时网络错误只重试请求。
+  // 对元组内返回的会话错误进行一次单飞重登；瞬时网络错误执行指数退避重试。
   Future<T> _fetchWithRetry<T>(Future<T> Function() requestFactory,
-      {int maxRetries = 1}) async {
+      {int maxRetries = 2}) async {
     int attempts = 0;
     while (true) {
       final requestLoginGeneration = _loginGeneration;
@@ -286,23 +326,20 @@ class UgrsSpider implements Spider {
                 errStr.contains("token 已过期") ||
                 errStr.contains("iplanetdirectorypro无效") ||
                 errStr.contains("wisportalid无效"));
-        final transientError = errStr.contains("connection closed") ||
-            errStr.contains("timeout") ||
-            errStr.contains("超时") ||
-            errStr.contains("httpexception") ||
-            errStr.contains("网络错误") ||
-            errStr.contains("socketexception");
+        final transientError = ZjuNetwork.isRouteTransportError(error) ||
+            errStr.contains("httpexception");
         if (attempts <= maxRetries && authenticationError) {
           // generation 防止多个失败请求同时启动重复的整套登录流程。
           if (_loginGeneration == requestLoginGeneration) {
             final loginErrors = await login();
             if (loginErrors.any((error) => error != null)) rethrow;
           }
-          await Future.delayed(const Duration(milliseconds: 300));
+          await Future.delayed(Duration(milliseconds: 350 * attempts));
           continue;
         }
         if (attempts <= maxRetries && transientError) {
-          await Future.delayed(const Duration(milliseconds: 300));
+          await Future.delayed(
+              Duration(milliseconds: 350 * (1 << (attempts - 1))));
           continue; // 继续下一次尝试
         }
         if (kDebugMode) {
@@ -339,7 +376,9 @@ class UgrsSpider implements Spider {
     var loginErrorMessages = <String?>[null, null, null];
     var majorCourseIds = <String>{};
 
-    if (DateTime.now().difference(_lastUpdateTime).inMinutes > 15) {
+    // 参考 zju-learning-cli：不每 15 分钟就盲目重跑整套密码登录，
+    // 延长复用窗口至 45 分钟，若中途会话失效由 _fetchWithRetry 自动单飞重登。
+    if (DateTime.now().difference(_lastUpdateTime).inMinutes > 45) {
       loginErrorMessages = await login();
     }
 
@@ -394,8 +433,15 @@ class UgrsSpider implements Spider {
         );
       }
 
+      final preferCalendarCache =
+          queryAcademicYearStart < academicYearStartFor(now);
       semesterConfigFetches.add(_timeConfigService
-          .getConfig(_httpClient, '$queryAcademicYear-1')
+          .getConfig(
+        _httpClient,
+        '$queryAcademicYear-1',
+        preferCache: preferCalendarCache,
+        isFuture: isFutureSemester('$queryAcademicYear-1', now),
+      )
           .then((value) {
         // 未开学学期的配置未发布是预期状态，单独计数，不计入降级。
         final expectedUnpublished = !isProbeYear &&
@@ -457,7 +503,12 @@ class UgrsSpider implements Spider {
               _describeRefreshFailure(error, stackTrace)));
 
       semesterConfigFetches.add(_timeConfigService
-          .getConfig(_httpClient, '$queryAcademicYear-2')
+          .getConfig(
+        _httpClient,
+        '$queryAcademicYear-2',
+        preferCache: preferCalendarCache,
+        isFuture: isFutureSemester('$queryAcademicYear-2', now),
+      )
           .then((value) {
         // 未开学学期的配置未发布是预期状态，单独计数，不计入降级。
         final expectedUnpublished = !isProbeYear &&
@@ -761,58 +812,62 @@ class UgrsSpider implements Spider {
     }).catchError((Object error, StackTrace stackTrace) =>
             _describeRefreshFailure(error, stackTrace)));
 
-    // getSqjl 只负责项目明细；外层记点严格按
-    // getMyInfo 网络、getMyInfo 账号缓存、getSqjl 项目合计三级降级。
-    fetches.add(() async {
-      final snapshot = await _sztz.getPracticeScoreData(
-        _httpClient,
-        reauthenticate: _reauthenticateSztz,
-      );
-      if (!snapshot.hasAnyData) {
-        // 两个接口都失败时保留上一次快照，不能用零覆盖旧汇总或旧明细。
-        return snapshot.summaryErrorMessage ??
-            snapshot.errorMessage ??
-            '实践数据当前不可用';
-      }
-      _usePracticeSnapshot(snapshot);
+    // 桌面精简模式跳过素质拓展平台（桌面端不展示二三四课堂记点，减少 3~5 次高失败率请求）
+    if (_includePractice) {
+      // getSqjl 只负责项目明细；外层记点严格按
+      // getMyInfo 网络、getMyInfo 账号缓存、getSqjl 项目合计三级降级。
+      fetches.add(() async {
+        final snapshot = await _sztz.getPracticeScoreData(
+          _httpClient,
+          reauthenticate: _reauthenticateSztz,
+        );
+        if (!snapshot.hasAnyData) {
+          // 两个接口都失败时保留上一次快照，不能用零覆盖旧汇总或旧明细。
+          return snapshot.summaryErrorMessage ??
+              snapshot.errorMessage ??
+              '实践数据当前不可用';
+        }
+        _usePracticeSnapshot(snapshot);
 
-      final degraded = <String>[];
-      if (snapshot.source == PracticeDataSource.sztzCache) {
-        degraded.add('项目实时请求失败，已使用 getSqjl 项目缓存');
-      } else if (snapshot.source == PracticeDataSource.unavailable) {
-        degraded.add('getSqjl 项目明细本次不可用，已保留原有明细');
-      }
-      switch (snapshot.summarySource) {
-        case PracticeSummarySource.cachedMyInfo:
-          degraded.add('getMyInfo 实时请求失败，已使用账号缓存');
-          break;
-        case PracticeSummarySource.calculatedFromSqjl:
-          degraded.add('getMyInfo 及其缓存不可用，已按 getSqjl 项目合计');
-          break;
-        case PracticeSummarySource.unavailable:
-          degraded.add('外层记点汇总本次不可用，已保留原有汇总');
-          break;
-        case PracticeSummarySource.networkMyInfo:
-        case PracticeSummarySource.legacyPersisted:
-          break;
-      }
-      if (degraded.isEmpty) return null;
-      final details = [
-        snapshot.errorMessage,
-        snapshot.summaryErrorMessage,
-      ].whereType<String>().join('；');
-      return degradedRefreshText(
-        '实践：${degraded.join('；')}',
-        details: details.isEmpty ? null : details,
-      );
-    }());
+        final degraded = <String>[];
+        if (snapshot.source == PracticeDataSource.sztzCache) {
+          degraded.add('项目实时请求失败，已使用 getSqjl 项目缓存');
+        } else if (snapshot.source == PracticeDataSource.unavailable) {
+          degraded.add('getSqjl 项目明细本次不可用，已保留原有明细');
+        }
+        switch (snapshot.summarySource) {
+          case PracticeSummarySource.cachedMyInfo:
+            degraded.add('getMyInfo 实时请求失败，已使用账号缓存');
+            break;
+          case PracticeSummarySource.calculatedFromSqjl:
+            degraded.add('getMyInfo 及其缓存不可用，已按 getSqjl 项目合计');
+            break;
+          case PracticeSummarySource.unavailable:
+            degraded.add('外层记点汇总本次不可用，已保留原有汇总');
+            break;
+          case PracticeSummarySource.networkMyInfo:
+          case PracticeSummarySource.legacyPersisted:
+            break;
+        }
+        if (degraded.isEmpty) return null;
+        final details = [
+          snapshot.errorMessage,
+          snapshot.summaryErrorMessage,
+        ].whereType<String>().join('；');
+        return degradedRefreshText(
+          '实践：${degraded.join('；')}',
+          details: details.isEmpty ? null : details,
+        );
+      }());
+    }
 
+    final activeLabels = fetchLabels;
     // 异步刷新：每完成一个顶层任务就向上层回调一次当前进度。
     // 校历(0)、课表(1)、考试(2)、成绩(3)共同拼出学期数据，全部成功后才暴露学期
     if (onProgress != null) {
       attachEverythingProgress(
           fetches: fetches,
-          fetchSequence: fetchSequence,
+          fetchSequence: activeLabels,
           semesterFetchIndices: const [0, 1, 2, 3],
           loginErrorMessages: loginErrorMessages,
           semesters: outSemesters,
@@ -848,17 +903,17 @@ class UgrsSpider implements Spider {
         final message = fetchErrorMessages[i]!;
         fetchErrorMessages[i] = isDegradedRefreshText(message)
             ? degradedRefreshText(
-                '${fetchSequence[i]}：${shortErrorText(message)}',
+                '${activeLabels[i]}：${shortErrorText(message)}',
                 details: detailedErrorText(message),
               )
-            : '${fetchSequence[i]}查询出错：$message';
+            : '${activeLabels[i]}查询出错：$message';
       }
       DiagnosticLogService.instance.setModuleResult(
-        fetchSequence[i],
+        activeLabels[i],
         fetchErrorMessages[i] == null
-            ? fetchSequence[i] == '校历'
+            ? activeLabels[i] == '校历'
                 ? calendarSuccessSummary
-                : fetchSequence[i] == '作业'
+                : activeLabels[i] == '作业'
                     ? '实时成功，${outTodos.length} 条'
                     : '实时成功'
             : isDegradedRefreshText(fetchErrorMessages[i])
