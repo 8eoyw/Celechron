@@ -73,21 +73,23 @@ void main() {
       expect(find.text('本学期课时进度'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      // Save an inspector screenshot for visual verification
-      final inspectorBoundary = GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(
-        key: inspectorBoundary,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: buildDesktopTheme(Brightness.dark),
-          home: DesktopShell(key: UniqueKey(), store: store),
-        ),
-      ));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.tap(find.text('数据结构基础').first);
-      await tester.pump(const Duration(milliseconds: 250));
-      await saveSnapshot(
-          tester, inspectorBoundary, '$out/1200x820_dark_course_inspector.png');
+      // Save inspector screenshots (dark & light) for visual verification
+      for (final brightness in Brightness.values) {
+        final inspectorBoundary = GlobalKey();
+        await tester.pumpWidget(RepaintBoundary(
+          key: inspectorBoundary,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: buildDesktopTheme(brightness),
+            home: DesktopShell(key: UniqueKey(), store: store),
+          ),
+        ));
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.tap(find.text('数据结构基础').first);
+        await tester.pump(const Duration(milliseconds: 250));
+        await saveSnapshot(tester, inspectorBoundary,
+            '$out/1200x820_${brightness.name}_course_inspector.png');
+      }
 
       // Esc closes inspector back to Up Next
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
