@@ -1,122 +1,119 @@
-import 'package:flutter/cupertino.dart' show CupertinoThemeData;
 import 'package:flutter/material.dart';
 import 'tokens.dart';
 
 ThemeData buildDesktopTheme(Brightness brightness) {
-  final c = PaperColors(brightness == Brightness.dark);
-  final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: c.hairlineStrong));
-  final base = ThemeData(
+  final isDark = brightness == Brightness.dark;
+  final c = isDark ? DesktopColors.dark : DesktopColors.light;
+
+  final colorScheme = ColorScheme(
+    brightness: brightness,
+    primary: c.primary,
+    onPrimary: c.onPrimary,
+    primaryContainer: c.primaryContainer,
+    onPrimaryContainer: c.onPrimaryContainer,
+    secondary: c.primary,
+    onSecondary: c.onPrimary,
+    secondaryContainer: c.railIndicator,
+    onSecondaryContainer: c.onRailIndicator,
+    tertiary: c.success,
+    onTertiary: c.onPrimary,
+    error: c.danger,
+    onError: c.onPrimary,
+    surface: c.sheet,
+    onSurface: c.text1,
+    onSurfaceVariant: c.text2,
+    outline: c.hairline,
+    outlineVariant: c.hairline,
+    surfaceContainerLowest: c.sheet,
+    surfaceContainerLow: c.surfaceLow,
+    surfaceContainer: c.chrome,
+    surfaceContainerHigh: c.surfaceHigh,
+    surfaceContainerHighest: c.surfaceHighest,
+  );
+
+  return ThemeData(
     useMaterial3: true,
     brightness: brightness,
-    colorScheme:
-        ColorScheme.fromSeed(seedColor: c.accent, brightness: brightness)
-            .copyWith(
-                primary: c.accent,
-                onPrimary: c.onAccent,
-                surface: c.surface,
-                onSurface: c.text,
-                error: c.danger),
-    fontFamily: Paper.font,
-    fontFamilyFallback: Paper.fallbacks,
-    scaffoldBackgroundColor: c.sidebar,
-    dividerColor: c.hairline,
-    visualDensity: VisualDensity.compact,
-    textSelectionTheme: TextSelectionThemeData(
-        cursorColor: c.accent,
-        selectionColor: c.accent.withValues(alpha: c.dark ? .30 : .20),
-        selectionHandleColor: c.accent),
-    scrollbarTheme: ScrollbarThemeData(
-        thickness: const WidgetStatePropertyAll(5),
-        radius: const Radius.circular(999),
-        crossAxisMargin: 2,
-        mainAxisMargin: 4,
-        thumbColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.dragged) ||
-              states.contains(WidgetState.hovered)) {
-            return c.text2.withValues(alpha: c.dark ? .55 : .45);
-          }
-          return c.text3.withValues(alpha: c.dark ? .32 : .25);
-        })),
-    switchTheme: SwitchThemeData(
-        trackOutlineColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? Colors.transparent
-                : c.hairlineStrong),
-        trackColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? c.accent
-                : c.glassControl),
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? c.onAccent : c.text2)),
-    textButtonTheme: TextButtonThemeData(
-        style: ButtonStyle(
-            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Paper.pillRadius))),
-            foregroundColor: WidgetStatePropertyAll(c.text),
-            overlayColor: WidgetStatePropertyAll(c.hover),
-            side: WidgetStateProperty.resolveWith((states) =>
-                states.contains(WidgetState.focused)
-                    ? BorderSide(color: c.accent, width: 1.5)
-                    : BorderSide.none))),
-    iconButtonTheme: IconButtonThemeData(
-        style: ButtonStyle(
-            shape: WidgetStatePropertyAll(RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Paper.pillRadius))),
-            overlayColor: WidgetStatePropertyAll(c.hover),
-            side: WidgetStateProperty.resolveWith((states) =>
-                states.contains(WidgetState.focused)
-                    ? BorderSide(color: c.accent, width: 1.5)
-                    : BorderSide.none))),
-    splashFactory: NoSplash.splashFactory,
-    cupertinoOverrideTheme: CupertinoThemeData(brightness: brightness),
+    colorScheme: colorScheme,
+    scaffoldBackgroundColor: c.chrome,
+    canvasColor: c.sheet,
+    fontFamily: DesktopFonts.primary,
+    fontFamilyFallback: DesktopFonts.fallback,
     extensions: [c],
-    inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: c.glassControl,
-        isDense: true,
-        hintStyle: TextStyle(
-            fontFamily: Paper.font,
-            fontFamilyFallback: Paper.fallbacks,
-            fontSize: 13.5,
-            color: c.text3),
-        labelStyle: TextStyle(
-            fontFamily: Paper.font,
-            fontFamilyFallback: Paper.fallbacks,
-            fontSize: 13,
-            color: c.text2),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: border,
-        enabledBorder: border,
-        hoverColor: c.hover,
-        focusedBorder: border.copyWith(
-            borderSide: BorderSide(color: c.accent, width: 1.5))),
-    dividerTheme: DividerThemeData(color: c.hairline, space: 1, thickness: 1),
-    dialogTheme: DialogThemeData(
-        backgroundColor: c.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(Paper.popoverRadius),
-            side: BorderSide(color: c.hairlineStrong))),
+    dividerTheme: DividerThemeData(
+      color: c.hairline,
+      thickness: 1,
+      space: 1,
+    ),
     tooltipTheme: TooltipThemeData(
-        waitDuration: const Duration(milliseconds: 360),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-            color: c.dark ? const Color(0xE81B202C) : const Color(0xEA1B1F27),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0x28FFFFFF)),
-            boxShadow: c.shadow),
-        textStyle: const TextStyle(
-            fontFamily: Paper.font,
-            fontFamilyFallback: Paper.fallbacks,
-            fontSize: 12,
-            height: 1.35,
-            color: Color(0xFFE8ECF4))),
+      waitDuration: const Duration(milliseconds: 450),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF32353B) : const Color(0xFF202124),
+        borderRadius: BorderRadius.circular(DesktopRadius.badge),
+      ),
+      textStyle: const TextStyle(
+        fontFamily: DesktopFonts.primary,
+        fontFamilyFallback: DesktopFonts.fallback,
+        fontSize: 12,
+        color: Color(0xFFF8FAFD),
+        height: 1.35,
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: c.sheet,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DesktopRadius.dialog),
+        side: BorderSide(color: c.hairline),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: isDark ? const Color(0xFF303339) : const Color(0xFF202124),
+      contentTextStyle: const TextStyle(
+        fontFamily: DesktopFonts.primary,
+        fontFamilyFallback: DesktopFonts.fallback,
+        fontSize: 13,
+        color: Color(0xFFF8FAFD),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(DesktopRadius.chip),
+      ),
+    ),
+    scrollbarTheme: ScrollbarThemeData(
+      thumbVisibility: const WidgetStatePropertyAll(false),
+      thickness: const WidgetStatePropertyAll(6),
+      radius: const Radius.circular(3),
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.dragged)) {
+          return c.text3.withValues(alpha: 0.55);
+        }
+        return c.text3.withValues(alpha: 0.28);
+      }),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: c.surfaceLow,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(DesktopRadius.input),
+        borderSide: BorderSide(color: c.hairline),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(DesktopRadius.input),
+        borderSide: BorderSide(color: c.hairline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(DesktopRadius.input),
+        borderSide: BorderSide(color: c.primary, width: 1.5),
+      ),
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: c.primary,
+      selectionColor: c.selectedFill,
+    ),
   );
-  return base.copyWith(
-      textTheme: base.textTheme
-          .apply(fontFamily: Paper.font)
-          .apply(bodyColor: c.text, displayColor: c.text));
 }

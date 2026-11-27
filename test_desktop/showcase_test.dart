@@ -1,18 +1,18 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:celechron/desktop/format.dart';
+import 'package:celechron/desktop/pages/tasks/tasks_page.dart';
+import 'package:celechron/desktop/shell/companion_panel.dart';
 import 'package:celechron/desktop/shell/shell.dart';
-import 'package:celechron/desktop/shell/sidebar.dart';
-import 'package:celechron/desktop/shell/command_palette.dart';
+import 'package:celechron/desktop/state/desktop_controller.dart';
 import 'package:celechron/desktop/theme/app_theme.dart';
-import 'package:celechron/desktop/widgets/homework_row.dart';
-import 'package:celechron/desktop/widgets/login_form.dart';
-import 'package:celechron/desktop/widgets/skeleton.dart';
-import 'package:celechron/desktop/widgets/scroll_area.dart';
+import 'package:celechron/desktop/widgets/command_palette.dart';
+import 'package:celechron/desktop/widgets/common_ui.dart';
+import 'package:celechron/desktop/widgets/login_gate.dart';
 import 'package:celechron/model/todo.dart';
 import 'harness.dart';
 
@@ -26,7 +26,7 @@ void main() {
       'id': '42',
       'course_id': '123',
       'type': 'homework',
-      'end_time': '2026-11-16T15:59:00Z'
+      'end_time': '2026-11-16T15:59:00Z',
     });
     expect(todo.endTime, DateTime.parse('2026-11-16T15:59:00Z').toLocal());
     expect(todo.toJson()['end_time'], '2026-11-16T15:59:00.000Z');
@@ -37,168 +37,210 @@ void main() {
     todo.courseId = null;
     expect(homeworkUri(todo).path, '/user/index');
   });
-  testWidgets('showcase matrix and interaction states', (tester) async {
+
+  testWidgets('v4 showcase matrix and interaction flows', (tester) async {
     String? copiedText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData')
+      if (call.method == 'Clipboard.setData') {
         copiedText = (call.arguments as Map)['text'] as String?;
+      }
       return null;
     });
+
     final store = await tester.runAsync(setupDemo);
     try {
-      await renderMatrix(
-          tester,
-          store!,
-          Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
-              '${Directory.systemTemp.path}/celechron_paper_showcase');
-      tester.view.physicalSize = const Size(1000, 700);
+      final out = Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
+          '${Directory.systemTemp.path}/celechron_v4_showcase';
+      await renderMatrix(tester, store!, out);
+
+      // 1. Companion panel docks at 1200x820, overlays at 1000x700 via Ctrl+\
+      tester.view.physicalSize = const Size(1200, 820);
       await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: DesktopShell(key: UniqueKey(), store: store)));
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.dark),
+        home: DesktopShell(key: UniqueKey(), store: store),
+      ));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(
-          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
-          isTrue);
+      expect(find.byType(CompanionPanel), findsOneWidget);
       expect(find.text('已逾期 1'), findsOneWidget);
       expect(find.text('12:04'), findsOneWidget);
-      expect(tester.takeException(), isNull, reason: 'initial rail');
+
+      // Clicking a course block opens Course Inspector in the Companion Panel
+      await tester.tap(find.text('数据结构基础').first);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('课程详情'), findsOneWidget);
+      expect(find.text('本学期课时进度'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Save an inspector screenshot for visual verification
+      final inspectorBoundary = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: inspectorBoundary,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: buildDesktopTheme(Brightness.dark),
+          home: DesktopShell(key: UniqueKey(), store: store),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('数据结构基础').first);
+      await tester.pump(const Duration(milliseconds: 250));
+      await saveSnapshot(
+          tester, inspectorBoundary, '$out/1200x820_dark_course_inspector.png');
+
+      // Esc closes inspector back to Up Next
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('待办与近期'), findsOneWidget);
+
+      // Narrow 1000x700 hides docked companion until Ctrl+\ toggles overlay
+      tester.view.physicalSize = const Size(1000, 700);
+      await tester.pumpWidget(MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.light),
+        home: DesktopShell(key: UniqueKey(), store: store),
+      ));
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(CompanionPanel), findsNothing);
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.backslash);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await tester.pump();
-      expect(
-          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
-          isFalse);
-      expect(tester.takeException(), isNull, reason: 'manual expand');
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.byType(CompanionPanel), findsOneWidget);
+
+      // 2. Command Palette (Ctrl+K) search + Enter navigation
       tester.view.physicalSize = const Size(1200, 820);
-      await tester.pump();
-      tester.view.physicalSize = const Size(1000, 700);
-      await tester.pump();
-      expect(tester.takeException(), isNull, reason: 'threshold reset');
-      // Palette search includes the course name, supports arrows/Enter, and navigates.
+      await tester.pumpWidget(MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.light),
+        home: DesktopShell(key: UniqueKey(), store: store),
+      ));
+      await tester.pump(const Duration(milliseconds: 200));
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.byType(CommandPalette), findsOneWidget);
       await tester.enterText(
-          find.descendant(
-              of: find.byType(CommandPalette),
-              matching: find.byType(TextField)),
-          '数字逻辑设计');
+        find.descendant(
+          of: find.byType(CommandPalette),
+          matching: find.byType(TextField),
+        ),
+        '实验报告一',
+      );
       await tester.pump();
       expect(find.text('实验报告一'), findsWidgets);
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(
-          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).selected,
-          DesktopPage.homework);
-      // Course filter and context menu remain usable with keyboard focus.
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byType(TasksPage), findsOneWidget);
+      expect(find.text('作业详情'), findsOneWidget);
+
+      // 3. Course filter & right-click copy title on Tasks page
       await tester.tap(find.text('全部课程'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('数字逻辑设计（2）'));
       await tester.pumpAndSettle();
-      expect(find.byType(HomeworkRow), findsNWidgets(2));
-      await tester.tap(find.text('实验报告一'), buttons: kSecondaryMouseButton);
+      expect(find.byType(HomeworkItemRow), findsNWidgets(2));
+      await tester.tap(
+        find.descendant(
+            of: find.byType(TasksPage), matching: find.text('实验报告一')),
+        buttons: kSecondaryMouseButton,
+      );
       await tester.pumpAndSettle();
       expect(find.text('在浏览器打开'), findsOneWidget);
-      await tester.tap(find.text('复制标题'));
+      await tester.tap(find.text('复制标题').last);
       await tester.pumpAndSettle();
       expect(copiedText, '实验报告一');
-      expect(tester.takeException(), isNull);
-      expect(
-          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).collapsed,
-          isTrue);
+
+      // 4. Text scaling safety on HomeworkItemRow
       await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: MediaQuery(
-              data: const MediaQueryData(textScaler: TextScaler.linear(1.25)),
-              child: Scaffold(
-                  body: Center(
-                      child: SizedBox(
-                          width: 340,
-                          child: HomeworkRow(
-                              todo: store.todos.first, now: store.now)))))));
+        theme: buildDesktopTheme(Brightness.light),
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.25)),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 360,
+                child: HomeworkItemRow(
+                  todo: store.todos.first,
+                  now: store.now,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
       await tester.pump();
       for (final element in find.byType(RichText).evaluate()) {
-        expect((element.renderObject! as RenderParagraph).didExceedMaxLines,
-            isFalse);
+        expect(
+          (element.renderObject! as RenderParagraph).didExceedMaxLines,
+          isFalse,
+        );
       }
       expect(tester.takeException(), isNull);
+
+      // 5. Logged-out gate & screenshot coverage
       store.scholar.isLogan = false;
-      await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: DesktopShell(key: UniqueKey(), store: store)));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(LoginForm), findsOneWidget);
-      expect(find.widgetWithText(TextField, '学号'), findsOneWidget);
-      await tester.enterText(find.widgetWithText(TextField, '学号'), 'demo');
-      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
-      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-      await tester.pump();
-      expect(
-          tester.widget<DesktopSidebar>(find.byType(DesktopSidebar)).selected,
-          DesktopPage.today);
-      expect(tester.takeException(), isNull);
-      // Logged-out bodies for every destination, and PNG coverage at all sizes/themes.
-      final out = Platform.environment['CELECHRON_SHOWCASE_OUT'] ??
-          '${Directory.systemTemp.path}/celechron_paper_showcase';
       for (final size in desktopSizes) {
         tester.view.physicalSize = size;
         for (final brightness in Brightness.values) {
           final boundary = GlobalKey();
           await tester.pumpWidget(RepaintBoundary(
-              key: boundary,
-              child: MaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  theme: buildDesktopTheme(brightness),
-                  home: DesktopShell(key: UniqueKey(), store: store))));
-          await tester.pump(const Duration(milliseconds: 300));
+            key: boundary,
+            child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              theme: buildDesktopTheme(brightness),
+              home: DesktopShell(key: UniqueKey(), store: store),
+            ),
+          ));
+          await tester.pump(const Duration(milliseconds: 200));
           expect(find.byType(LoginForm), findsOneWidget);
           expect(tester.takeException(), isNull);
-          await saveSnapshot(tester, boundary,
-              '$out/${size.width.toInt()}x${size.height.toInt()}_${brightness.name}_logged_out.png');
+          if (size == const Size(1200, 820)) {
+            await saveSnapshot(
+                tester, boundary, '$out/1200x820_${brightness.name}_logged_out.png');
+          }
         }
       }
-      for (final page in DesktopPage.values) {
-        await tester.pumpWidget(MaterialApp(
-            theme: buildDesktopTheme(Brightness.light),
-            home: DesktopShell(
-                key: UniqueKey(), store: store, initialPage: page)));
-        await tester.pump();
-        expect(find.byType(LoginForm), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
+
+      // 6. Offline sync error keeps cached data visible
       store.scholar.isLogan = true;
       store.lastErrors = ['示范离线错误'];
+      tester.view.physicalSize = const Size(1200, 820);
       await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: DesktopShell(key: UniqueKey(), store: store)));
-      await tester.pump(const Duration(milliseconds: 300));
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.light),
+        home: DesktopShell(key: UniqueKey(), store: store),
+      ));
+      await tester.pump(const Duration(milliseconds: 250));
       expect(find.text('同步失败'), findsOneWidget);
       expect(find.text('实验报告一'), findsOneWidget);
-      // First refresh without cached data uses skeletons. A settled empty list uses an empty state.
+
+      // 7. Initial loading skeleton & empty state
       store.scholar.semesters.clear();
       store.scholar.todos.clear();
       store.refreshing = true;
       await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: DesktopShell(key: UniqueKey(), store: store)));
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.light),
+        home: DesktopShell(key: UniqueKey(), store: store),
+      ));
       await tester.pump();
-      expect(find.byType(SkeletonRows), findsOneWidget);
-      expect(find.byType(ScrollArea), findsNothing);
+      expect(find.byType(LoadingSkeleton), findsWidgets);
+
       store.refreshing = false;
       await tester.pumpWidget(MaterialApp(
-          theme: buildDesktopTheme(Brightness.light),
-          home: DesktopShell(
-              key: UniqueKey(),
-              store: store,
-              initialPage: DesktopPage.homework)));
+        debugShowCheckedModeBanner: false,
+        theme: buildDesktopTheme(Brightness.light),
+        home: DesktopShell(
+          key: UniqueKey(),
+          store: store,
+          initialDestination: DesktopDestination.tasks,
+        ),
+      ));
       await tester.pump();
-      expect(find.text('没有待交作业'), findsOneWidget);
+      expect(find.text('暂无待办任务'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
       await disposeDemo(tester, store!);

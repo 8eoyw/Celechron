@@ -1,191 +1,301 @@
 import 'package:flutter/material.dart';
 
-/// Celechron Desktop v3 ("Antigravity Studio") design constants.
-class Paper {
-  static const font = 'Segoe UI';
-  static const fallbacks = [
-    'Microsoft YaHei UI',
-    'Microsoft YaHei',
-    'Microsoft JhengHei UI',
-    'PingFang SC',
-    'Noto Sans CJK SC'
-  ];
+/// Strict concentric radius scale following Google Material 3 + Antigravity.
+/// Small tags/badges use 4–6px so they never distort into stubby ovals.
+abstract final class DesktopRadius {
+  static const double sheet = 16;
+  static const double dialog = 16;
+  static const double popover = 12;
+  static const double card = 12;
+  static const double block = 8;
+  static const double chip = 8;
+  static const double input = 8;
+  static const double badge = 6;
+  static const double tag = 4;
+  static const double pill = 999; // Reserved strictly for wide horizontal pills.
+}
 
-  // 4px spacing grid
-  static const double s1 = 4,
-      s2 = 8,
-      s3 = 12,
-      s4 = 16,
-      s5 = 20,
-      s6 = 24,
-      s8 = 32,
-      s10 = 40;
+abstract final class DesktopFonts {
+  static const String primary = 'Segoe UI';
+  static const List<String> fallback = ['Microsoft YaHei UI', 'PingFang SC'];
+}
 
-  // Strict 3-tier concentric corner radius system: 4 / 8 / 12.
-  static const double chipRadius = 4,
-      smallRadius = 8,
-      blockRadius = 12,
-      popoverRadius = 12,
-      frameRadius = 12,
-      pillRadius = 8;
+@immutable
+class DesktopColors extends ThemeExtension<DesktopColors> {
+  const DesktopColors({
+    required this.chrome,
+    required this.sheet,
+    required this.surfaceLow,
+    required this.surfaceHigh,
+    required this.surfaceHighest,
+    required this.hover,
+    required this.selectedFill,
+    required this.selectedBorder,
+    required this.hairline,
+    required this.gridHour,
+    required this.gridHalf,
+    required this.pastScrim,
+    required this.text1,
+    required this.text2,
+    required this.text3,
+    required this.primary,
+    required this.primaryContainer,
+    required this.onPrimary,
+    required this.onPrimaryContainer,
+    required this.railIndicator,
+    required this.onRailIndicator,
+    required this.danger,
+    required this.dangerFill,
+    required this.warning,
+    required this.warningFill,
+    required this.success,
+    required this.successFill,
+  });
 
-  // Unified top chrome height (matches Antigravity's sleek 46px title bar).
-  static const double topBarHeight = 46;
+  final Color chrome;
+  final Color sheet;
+  final Color surfaceLow;
+  final Color surfaceHigh;
+  final Color surfaceHighest;
+  final Color hover;
+  final Color selectedFill;
+  final Color selectedBorder;
+  final Color hairline;
+  final Color gridHour;
+  final Color gridHalf;
+  final Color pastScrim;
+  final Color text1;
+  final Color text2;
+  final Color text3;
+  final Color primary;
+  final Color primaryContainer;
+  final Color onPrimary;
+  final Color onPrimaryContainer;
+  final Color railIndicator;
+  final Color onRailIndicator;
+  final Color danger;
+  final Color dangerFill;
+  final Color warning;
+  final Color warningFill;
+  final Color success;
+  final Color successFill;
 
-  // Official Google Calendar M3 6-hue course palette (zero muddy brown/olive;
-  // coral-red & amber reserved strictly for exams, overdue, imminent deadlines, and now).
-  static const paletteDark = [
-    Color(0xFF8AB4F8), // Google Blue
-    Color(0xFF6DD5A8), // Google Sage Mint
-    Color(0xFFA5A8F6), // Google Lavender Indigo
-    Color(0xFF67D4E8), // Google Sky Cyan
-    Color(0xFFC79AF7), // Google Iris Grape
-    Color(0xFF5EC9BA), // Google Eucalyptus Teal
-  ];
-  static const paletteLight = [
-    Color(0xFF1A73E8), // Google Blue
-    Color(0xFF1E8E68), // Google Sage
-    Color(0xFF5C6BC0), // Google Indigo
-    Color(0xFF0288D1), // Google Sky
-    Color(0xFF8E24AA), // Google Grape
-    Color(0xFF00897B), // Google Teal
-  ];
+  static const light = DesktopColors(
+    chrome: Color(0xFFF3F6FC),
+    sheet: Color(0xFFFFFFFF),
+    surfaceLow: Color(0xFFF8FAFD),
+    surfaceHigh: Color(0xFFE9EEF6),
+    surfaceHighest: Color(0xFFDDE3EA),
+    hover: Color(0x0D1F1F1F),
+    selectedFill: Color(0x1A0B57D0),
+    selectedBorder: Color(0x520B57D0),
+    hairline: Color(0xFFE1E5EC),
+    gridHour: Color(0xFFE3E7EE),
+    gridHalf: Color(0xFFF1F3F7),
+    pastScrim: Color(0x081F1F1F),
+    text1: Color(0xFF1F1F1F),
+    text2: Color(0xFF444746),
+    text3: Color(0xFF6B7075),
+    primary: Color(0xFF0B57D0),
+    primaryContainer: Color(0xFFD3E3FD),
+    onPrimary: Color(0xFFFFFFFF),
+    onPrimaryContainer: Color(0xFF041E49),
+    railIndicator: Color(0xFFC2E7FF),
+    onRailIndicator: Color(0xFF001D35),
+    danger: Color(0xFFB3261E),
+    dangerFill: Color(0xFFFCE8E6),
+    warning: Color(0xFFB06000),
+    warningFill: Color(0xFFFEF3E2),
+    success: Color(0xFF137333),
+    successFill: Color(0xFFE6F4EA),
+  );
 
-  static int colorIndexFor(String name) {
-    // FNV-1a 32-bit hash for even spread across Chinese course names.
-    var hash = 0x811c9dc5;
-    for (final c in name.codeUnits) {
-      hash ^= c;
-      hash = (hash * 0x01000193) & 0x7fffffff;
-    }
-    return hash % paletteDark.length;
+  static const dark = DesktopColors(
+    chrome: Color(0xFF131314),
+    sheet: Color(0xFF1B1C1F),
+    surfaceLow: Color(0xFF17181B),
+    surfaceHigh: Color(0xFF25272B),
+    surfaceHighest: Color(0xFF303339),
+    hover: Color(0x12E8EAED),
+    selectedFill: Color(0x268AB4F8),
+    selectedBorder: Color(0x66A8C7FA),
+    hairline: Color(0xFF2B2E34),
+    gridHour: Color(0xFF2A2D33),
+    gridHalf: Color(0xFF212328),
+    pastScrim: Color(0x14000000),
+    text1: Color(0xFFE8EAED),
+    text2: Color(0xFFBDC1C6),
+    text3: Color(0xFF8C929C),
+    primary: Color(0xFFA8C7FA),
+    primaryContainer: Color(0xFF173A73),
+    onPrimary: Color(0xFF062E6F),
+    onPrimaryContainer: Color(0xFFD3E3FD),
+    railIndicator: Color(0xFF1B3A5C),
+    onRailIndicator: Color(0xFFC2E7FF),
+    danger: Color(0xFFF2B8B5),
+    dangerFill: Color(0x33F2B8B5),
+    warning: Color(0xFFFDD663),
+    warningFill: Color(0x29FDD663),
+    success: Color(0xFF81C995),
+    successFill: Color(0x2681C995),
+  );
+
+  static DesktopColors of(BuildContext context) =>
+      Theme.of(context).extension<DesktopColors>() ??
+      (Theme.of(context).brightness == Brightness.dark ? dark : light);
+
+  @override
+  DesktopColors copyWith({
+    Color? chrome,
+    Color? sheet,
+    Color? surfaceLow,
+    Color? surfaceHigh,
+    Color? surfaceHighest,
+    Color? hover,
+    Color? selectedFill,
+    Color? selectedBorder,
+    Color? hairline,
+    Color? gridHour,
+    Color? gridHalf,
+    Color? pastScrim,
+    Color? text1,
+    Color? text2,
+    Color? text3,
+    Color? primary,
+    Color? primaryContainer,
+    Color? onPrimary,
+    Color? onPrimaryContainer,
+    Color? railIndicator,
+    Color? onRailIndicator,
+    Color? danger,
+    Color? dangerFill,
+    Color? warning,
+    Color? warningFill,
+    Color? success,
+    Color? successFill,
+  }) =>
+      DesktopColors(
+        chrome: chrome ?? this.chrome,
+        sheet: sheet ?? this.sheet,
+        surfaceLow: surfaceLow ?? this.surfaceLow,
+        surfaceHigh: surfaceHigh ?? this.surfaceHigh,
+        surfaceHighest: surfaceHighest ?? this.surfaceHighest,
+        hover: hover ?? this.hover,
+        selectedFill: selectedFill ?? this.selectedFill,
+        selectedBorder: selectedBorder ?? this.selectedBorder,
+        hairline: hairline ?? this.hairline,
+        gridHour: gridHour ?? this.gridHour,
+        gridHalf: gridHalf ?? this.gridHalf,
+        pastScrim: pastScrim ?? this.pastScrim,
+        text1: text1 ?? this.text1,
+        text2: text2 ?? this.text2,
+        text3: text3 ?? this.text3,
+        primary: primary ?? this.primary,
+        primaryContainer: primaryContainer ?? this.primaryContainer,
+        onPrimary: onPrimary ?? this.onPrimary,
+        onPrimaryContainer: onPrimaryContainer ?? this.onPrimaryContainer,
+        railIndicator: railIndicator ?? this.railIndicator,
+        onRailIndicator: onRailIndicator ?? this.onRailIndicator,
+        danger: danger ?? this.danger,
+        dangerFill: dangerFill ?? this.dangerFill,
+        warning: warning ?? this.warning,
+        warningFill: warningFill ?? this.warningFill,
+        success: success ?? this.success,
+        successFill: successFill ?? this.successFill,
+      );
+
+  @override
+  DesktopColors lerp(DesktopColors? other, double t) {
+    if (other == null) return this;
+    Color l(Color a, Color b) => Color.lerp(a, b, t)!;
+    return DesktopColors(
+      chrome: l(chrome, other.chrome),
+      sheet: l(sheet, other.sheet),
+      surfaceLow: l(surfaceLow, other.surfaceLow),
+      surfaceHigh: l(surfaceHigh, other.surfaceHigh),
+      surfaceHighest: l(surfaceHighest, other.surfaceHighest),
+      hover: l(hover, other.hover),
+      selectedFill: l(selectedFill, other.selectedFill),
+      selectedBorder: l(selectedBorder, other.selectedBorder),
+      hairline: l(hairline, other.hairline),
+      gridHour: l(gridHour, other.gridHour),
+      gridHalf: l(gridHalf, other.gridHalf),
+      pastScrim: l(pastScrim, other.pastScrim),
+      text1: l(text1, other.text1),
+      text2: l(text2, other.text2),
+      text3: l(text3, other.text3),
+      primary: l(primary, other.primary),
+      primaryContainer: l(primaryContainer, other.primaryContainer),
+      onPrimary: l(onPrimary, other.onPrimary),
+      onPrimaryContainer: l(onPrimaryContainer, other.onPrimaryContainer),
+      railIndicator: l(railIndicator, other.railIndicator),
+      onRailIndicator: l(onRailIndicator, other.onRailIndicator),
+      danger: l(danger, other.danger),
+      dangerFill: l(dangerFill, other.dangerFill),
+      warning: l(warning, other.warning),
+      warningFill: l(warningFill, other.warningFill),
+      success: l(success, other.success),
+      successFill: l(successFill, other.successFill),
+    );
   }
-
-  static Color colorFor(String name, {bool dark = false}) =>
-      (dark ? paletteDark : paletteLight)[colorIndexFor(name)];
 }
 
-/// True Antigravity neutral graphite dark + Google Workspace studio light tokens.
-class PaperColors extends ThemeExtension<PaperColors> {
-  const PaperColors(this.dark);
-  final bool dark;
+abstract final class DesktopType {
+  static const List<FontFeature> tabular = [FontFeature.tabularFigures()];
 
-  // ─── Surface Hierarchy (NO box-in-box nesting) ───
-  /// Outer window chrome: sidebar + unified top bar.
-  Color get sidebar => dark ? const Color(0xFF18181A) : const Color(0xFFF0F4F9);
-
-  /// Primary inset workspace canvas (sits inside the chrome with a 12px frame).
-  Color get canvas => dark ? const Color(0xFF0F0F11) : const Color(0xFFFFFFFF);
-
-  /// Subtle secondary inspector / rail pane inside the workspace (1 tonal step).
-  Color get rail => dark ? const Color(0xFF131316) : const Color(0xFFF8FAFD);
-
-  /// Floating overlays, dialogs, inputs, and subtle surface blocks.
-  Color get surface => dark ? const Color(0xFF1A1A1E) : const Color(0xFFFFFFFF);
-
-  /// Elevated interactive chip / table header / hover surface.
-  Color get surfaceElevated =>
-      dark ? const Color(0xFF232328) : const Color(0xFFE9EEF6);
-
-  /// Frosted translucent overlay for CommandPalette, Popover, ContextMenu.
-  Color get glassSurface =>
-      dark ? const Color(0xE01A1A1F) : const Color(0xEBFFFFFF);
-
-  /// Subtle translucent control fill (inputs, segmented track, neutral counters).
-  Color get glassControl =>
-      dark ? const Color(0x0DFFFFFF) : const Color(0x090F172A);
-
-  /// Antigravity flat borderless translucent selection fill (dark) / Gmail tonal pill (light).
-  Color get selectionFill =>
-      dark ? const Color(0x16FFFFFF) : const Color(0xFFD3E3FD);
-  Color get selectionInk =>
-      dark ? const Color(0xFFF3F4F6) : const Color(0xFF041E49);
-
-  /// Hover wash for rows & buttons.
-  Color get hover => dark ? const Color(0x0BFFFFFF) : const Color(0x080F172A);
-
-  /// Structural dividers and inset workspace rim.
-  Color get hairline =>
-      dark ? const Color(0x14FFFFFF) : const Color(0x120F172A);
-
-  /// Control border for inputs, dropdown triggers, floating menus.
-  Color get hairlineStrong =>
-      dark ? const Color(0x22FFFFFF) : const Color(0x1F0F172A);
-
-  /// Dedicated timeline grid lines (full hour vs half hour).
-  Color get gridHour =>
-      dark ? const Color(0x14FFFFFF) : const Color(0x130F172A);
-  Color get gridHalf =>
-      dark ? const Color(0x07FFFFFF) : const Color(0x070F172A);
-
-  // ─── WCAG AA+ Typography Inks ───
-  Color get text => dark ? const Color(0xFFECEEF2) : const Color(0xFF1A1D24);
-  Color get text2 => dark ? const Color(0xFFA0A4AE) : const Color(0xFF4A5260);
-  Color get text3 => dark ? const Color(0xFF7B808C) : const Color(0xFF6B7280);
-
-  // ─── Google M3 Semantic Accent Roles ───
-  Color get accent => dark ? const Color(0xFF8AB4F8) : const Color(0xFF1A73E8);
-  Color get accentSoft =>
-      dark ? const Color(0x208AB4F8) : const Color(0x151A73E8);
-  Color get accentSelectionBorder =>
-      dark ? const Color(0x3D8AB4F8) : const Color(0x331A73E8);
-  Color get danger => dark ? const Color(0xFFF28B82) : const Color(0xFFD93025);
-  Color get warning => dark ? const Color(0xFFFDD663) : const Color(0xFFB06000);
-  Color get success => dark ? const Color(0xFF81C995) : const Color(0xFF1E8E3E);
-
-  /// High-contrast ink on solid accent/danger pills.
-  Color get onAccent =>
-      dark ? const Color(0xFF0F0F11) : const Color(0xFFFFFFFF);
-
-  List<BoxShadow> get shadow => [
-        BoxShadow(
-            color: dark ? const Color(0xA6000000) : const Color(0x1C0F172A),
-            blurRadius: 28,
-            spreadRadius: -6,
-            offset: const Offset(0, 12)),
-        BoxShadow(
-            color: dark ? const Color(0x4D000000) : const Color(0x0D0F172A),
-            blurRadius: 8,
-            offset: const Offset(0, 2))
-      ];
-
-  static PaperColors of(BuildContext context) =>
-      Theme.of(context).extension<PaperColors>()!;
-  @override
-  PaperColors copyWith({bool? dark}) => PaperColors(dark ?? this.dark);
-  @override
-  PaperColors lerp(PaperColors? other, double t) =>
-      t < .5 ? this : other ?? this;
-}
-
-class PaperType {
-  static TextStyle base(
-          BuildContext c, double size, FontWeight weight, double height,
-          [Color? color, double? letterSpacing]) =>
+  static TextStyle _base(
+    BuildContext context,
+    double size,
+    FontWeight weight,
+    Color color, {
+    double? height,
+    double? letterSpacing,
+    bool numeric = false,
+  }) =>
       TextStyle(
-          fontFamily: Paper.font,
-          fontFamilyFallback: Paper.fallbacks,
-          fontSize: size,
-          fontWeight: weight,
-          height: height,
-          letterSpacing: letterSpacing,
-          color: color ?? PaperColors.of(c).text,
-          fontFeatures: const [FontFeature.tabularFigures()]);
-  static TextStyle display(BuildContext c) =>
-      base(c, 15.5, FontWeight.w600, 1.25, null, -0.2);
-  static TextStyle h1(BuildContext c) =>
-      base(c, 15, FontWeight.w600, 1.25, null, -0.15);
-  static TextStyle h2(BuildContext c) =>
-      base(c, 14, FontWeight.w600, 1.3, null, -0.1);
-  static TextStyle cardTitle(BuildContext c) =>
-      base(c, 13.5, FontWeight.w600, 1.3, PaperColors.of(c).text, -0.1);
-  static TextStyle body(BuildContext c) => base(c, 13.5, FontWeight.w400, 1.45);
-  static TextStyle strong(BuildContext c) =>
-      base(c, 13.5, FontWeight.w500, 1.45);
-  static TextStyle meta(BuildContext c) =>
-      base(c, 12, FontWeight.w400, 1.35, PaperColors.of(c).text2);
-  static TextStyle label(BuildContext c) =>
-      base(c, 11.5, FontWeight.w500, 1.3, PaperColors.of(c).text3, 0.25);
-  static TextStyle number(BuildContext c) =>
-      base(c, 24, FontWeight.w600, 1.2, null, -0.4);
+        fontFamily: DesktopFonts.primary,
+        fontFamilyFallback: DesktopFonts.fallback,
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        height: height,
+        letterSpacing: letterSpacing,
+        fontFeatures: numeric ? tabular : null,
+      );
+
+  static TextStyle display(BuildContext context, {bool numeric = true}) => _base(
+      context, 28, FontWeight.w500, DesktopColors.of(context).text1,
+      height: 1.2, letterSpacing: -0.4, numeric: numeric);
+
+  static TextStyle title(BuildContext context) => _base(
+      context, 19, FontWeight.w500, DesktopColors.of(context).text1,
+      height: 1.25, letterSpacing: -0.2);
+
+  static TextStyle section(BuildContext context) => _base(
+      context, 14, FontWeight.w600, DesktopColors.of(context).text1,
+      height: 1.35);
+
+  static TextStyle body(BuildContext context, {bool numeric = false}) => _base(
+      context, 13.5, FontWeight.w400, DesktopColors.of(context).text1,
+      height: 1.4, numeric: numeric);
+
+  static TextStyle strong(BuildContext context, {bool numeric = false}) =>
+      _base(context, 13.5, FontWeight.w600, DesktopColors.of(context).text1,
+          height: 1.35, numeric: numeric);
+
+  static TextStyle meta(BuildContext context, {bool numeric = false}) => _base(
+      context, 12, FontWeight.w400, DesktopColors.of(context).text2,
+      height: 1.35, numeric: numeric);
+
+  static TextStyle caption(BuildContext context, {bool numeric = false}) =>
+      _base(context, 11.5, FontWeight.w500, DesktopColors.of(context).text3,
+          height: 1.3, numeric: numeric);
+
+  static TextStyle label(BuildContext context) => _base(
+      context, 11.5, FontWeight.w600, DesktopColors.of(context).text2,
+      height: 1.25, letterSpacing: 0.25);
+
+  static TextStyle mono(BuildContext context, {double size = 12}) => _base(
+      context, size, FontWeight.w500, DesktopColors.of(context).text2,
+      height: 1.25, numeric: true);
 }
