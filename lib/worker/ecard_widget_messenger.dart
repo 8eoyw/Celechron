@@ -25,7 +25,8 @@ class ECardWidgetMessenger {
   }
 
   static Future<bool> update({bool notifyNative = true}) async {
-    var secureStorage = const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
+    var secureStorage =
+        const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
     var username = await secureStorage.read(
         key: 'username', iOptions: secureStorageIOSOptions);
     var password = await secureStorage.read(
@@ -81,7 +82,8 @@ class ECardWidgetMessenger {
   }
 
   static Future<void> logout() async {
-    var secureStorage = const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
+    var secureStorage =
+        const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
     await secureStorage.delete(
         key: 'synjonesAuth', iOptions: secureStorageIOSOptions);
     await secureStorage.delete(

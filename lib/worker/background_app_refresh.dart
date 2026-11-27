@@ -90,7 +90,8 @@ Future<void> refreshScholar() async {
   );
 
   var scholar = Scholar();
-  var secureStorage = const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
+  var secureStorage =
+      const FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
   scholar.username = await secureStorage.read(
       key: 'username', iOptions: secureStorageIOSOptions);
   scholar.password = await secureStorage.read(

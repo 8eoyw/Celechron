@@ -20,7 +20,8 @@ class ECardPayPage extends StatelessWidget {
   static const _testAccount = '3200000000';
 
   Future<String?> _requestNewCode() async {
-    const secureStorage = FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
+    const secureStorage =
+        FlutterSecureStorage(mOptions: secureStorageMacOSOptions);
     var synjonesAuth = await secureStorage.read(
         key: 'synjonesAuth', iOptions: secureStorageIOSOptions);
     var eCardAccount = await secureStorage.read(
