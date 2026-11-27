@@ -141,9 +141,8 @@ class _CommandPaletteState extends State<CommandPalette> {
         onSelect: () => store.refresh(),
       ),
       _PaletteItem(
-        title: store.brightnessMode == BrightnessMode.dark
-            ? '切换为浅色主题'
-            : '切换为深色主题',
+        title:
+            store.brightnessMode == BrightnessMode.dark ? '切换为浅色主题' : '切换为深色主题',
         subtitle: '即时切换外观模式',
         category: '外观',
         icon: Icons.contrast_rounded,

@@ -144,7 +144,8 @@ class DesktopController extends ChangeNotifier {
 
   void toggleCompanion({bool? currentlyVisible}) {
     _companionUserToggled = true;
-    _companionOpen = currentlyVisible != null ? !currentlyVisible : !_companionOpen;
+    _companionOpen =
+        currentlyVisible != null ? !currentlyVisible : !_companionOpen;
     notifyListeners();
   }
 
@@ -222,7 +223,8 @@ class DesktopController extends ChangeNotifier {
     final task = Task(
       startTime: cleanStart,
       endTime: cleanEnd,
-      repeatEndsTime: DateTime(cleanStart.year, cleanStart.month, cleanStart.day),
+      repeatEndsTime:
+          DateTime(cleanStart.year, cleanStart.month, cleanStart.day),
     )..reset();
     task.type = type;
     task.startTime = cleanStart;

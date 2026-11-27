@@ -181,7 +181,19 @@ List<ZjuPeriodMarker> zjuPeriodMarkersOf(Semester? semester) {
   if (markers.isNotEmpty) return markers;
   // Fallback ZJU Zijingang standard period table when calendar is absent.
   const fallbackStarts = [
-    480, 530, 595, 645, 695, 805, 855, 905, 970, 1020, 1110, 1160, 1210,
+    480,
+    530,
+    595,
+    645,
+    695,
+    805,
+    855,
+    905,
+    970,
+    1020,
+    1110,
+    1160,
+    1210,
   ];
   return [
     for (var i = 0; i < fallbackStarts.length; i++)

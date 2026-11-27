@@ -198,8 +198,8 @@ void main() {
           expect(find.byType(LoginForm), findsOneWidget);
           expect(tester.takeException(), isNull);
           if (size == const Size(1200, 820)) {
-            await saveSnapshot(
-                tester, boundary, '$out/1200x820_${brightness.name}_logged_out.png');
+            await saveSnapshot(tester, boundary,
+                '$out/1200x820_${brightness.name}_logged_out.png');
           }
         }
       }

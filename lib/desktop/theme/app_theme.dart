@@ -70,7 +70,8 @@ ThemeData buildDesktopTheme(Brightness brightness) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? const Color(0xFF303339) : const Color(0xFF202124),
+      backgroundColor:
+          isDark ? const Color(0xFF303339) : const Color(0xFF202124),
       contentTextStyle: const TextStyle(
         fontFamily: DesktopFonts.primary,
         fontFamilyFallback: DesktopFonts.fallback,

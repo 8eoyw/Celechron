@@ -116,9 +116,8 @@ class _LoginFormState extends State<LoginForm> {
               DesktopAction(
                 onTap: _busy ? null : _submit,
                 backgroundColor: _busy ? c.surfaceHigh : c.primary,
-                hoverColor: _busy
-                    ? c.surfaceHigh
-                    : c.primary.withValues(alpha: 0.92),
+                hoverColor:
+                    _busy ? c.surfaceHigh : c.primary.withValues(alpha: 0.92),
                 borderRadius: DesktopRadius.chip,
                 padding: const EdgeInsets.symmetric(vertical: 11),
                 child: Center(

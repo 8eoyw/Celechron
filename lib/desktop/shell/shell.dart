@@ -88,8 +88,7 @@ class _DesktopShellState extends State<DesktopShell> {
       return KeyEventResult.handled;
     }
     if (ctrl && key == LogicalKeyboardKey.backslash) {
-      _controller.toggleCompanion(
-          currentlyVisible: _companionCurrentlyVisible);
+      _controller.toggleCompanion(currentlyVisible: _companionCurrentlyVisible);
       return KeyEventResult.handled;
     }
     if (ctrl && key == LogicalKeyboardKey.digit1) {
@@ -142,9 +141,9 @@ class _DesktopShellState extends State<DesktopShell> {
                     canDockCompanion &&
                     _controller.companionOpen;
                 final showOverlayCompanion = store.isLoggedIn &&
-                    !canDockCompanion &&
-                    _controller.companionUserToggled &&
-                    _controller.companionOpen ||
+                        !canDockCompanion &&
+                        _controller.companionUserToggled &&
+                        _controller.companionOpen ||
                     (store.isLoggedIn &&
                         !canDockCompanion &&
                         _controller.inspector != null &&
@@ -167,8 +166,8 @@ class _DesktopShellState extends State<DesktopShell> {
                           : Stack(
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                      0, 0, 12, 12),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(0, 0, 12, 12),
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
@@ -196,7 +195,7 @@ class _DesktopShellState extends State<DesktopShell> {
                                                 store: store,
                                                 controller: _controller,
                                                 wideWindow: wideWindow &&
-                                                    !showDockedCompanion
+                                                        !showDockedCompanion
                                                     ? true
                                                     : width >= 1480,
                                               ),
@@ -460,8 +459,8 @@ class _NavigationRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = DesktopColors.of(context);
     final openWorkCount = store.todos.length + store.pendingDeadlines.length;
-    final hasOverdue = store.todos.any(
-            (t) => t.endTime != null && t.endTime!.isBefore(store.now)) ||
+    final hasOverdue = store.todos
+            .any((t) => t.endTime != null && t.endTime!.isBefore(store.now)) ||
         store.pendingDeadlines.any((t) => t.endTime.isBefore(store.now));
 
     return SizedBox(
@@ -518,7 +517,8 @@ class _NavigationRail extends StatelessWidget {
             shortcut: 'Ctrl+3',
             selected: controller.destination == DesktopDestination.academics,
             showLabel: showLabels,
-            onTap: () => controller.setDestination(DesktopDestination.academics),
+            onTap: () =>
+                controller.setDestination(DesktopDestination.academics),
           ),
           const Spacer(),
           // Subtle account badge at rail footer
@@ -642,8 +642,7 @@ class _RailItem extends StatelessWidget {
                     label,
                     style: DesktopType.caption(context).copyWith(
                       color: selected ? c.text1 : c.text2,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ],

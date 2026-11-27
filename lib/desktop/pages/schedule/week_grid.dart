@@ -403,7 +403,8 @@ class _WeekColumn extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: isPast
-                      ? Color.lerp(isUser ? c.sheet : swatch.fill, c.sheet, 0.32)
+                      ? Color.lerp(
+                          isUser ? c.sheet : swatch.fill, c.sheet, 0.32)
                       : isHighlighted
                           ? Color.alphaBlend(
                               c.hover, isUser ? c.sheet : swatch.fill)
@@ -493,7 +494,8 @@ class _WeekHourPainter extends CustomPainter {
     final first = (metrics.startMinute / 30).ceil() * 30;
     for (var m = first; m <= metrics.endMinute; m += 30) {
       final y = metrics.minuteToY(m.toDouble());
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), m % 60 == 0 ? hp : sp);
+      canvas.drawLine(
+          Offset(0, y), Offset(size.width, y), m % 60 == 0 ? hp : sp);
     }
   }
 

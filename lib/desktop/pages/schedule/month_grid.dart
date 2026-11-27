@@ -73,7 +73,8 @@ class ScheduleMonthGrid extends StatelessWidget {
                           for (var col = 0; col < 7; col++)
                             Expanded(
                               child: _MonthCell(
-                                day: startMonday.add(Duration(days: r * 7 + col)),
+                                day: startMonday
+                                    .add(Duration(days: r * 7 + col)),
                                 currentMonth: focus.month,
                                 isToday: _sameDay(
                                   startMonday.add(Duration(days: r * 7 + col)),
@@ -153,9 +154,8 @@ class _MonthCell extends StatelessWidget {
             left: showLeftBorder
                 ? BorderSide(color: c.hairline)
                 : BorderSide.none,
-            top: showTopBorder
-                ? BorderSide(color: c.hairline)
-                : BorderSide.none,
+            top:
+                showTopBorder ? BorderSide(color: c.hairline) : BorderSide.none,
           ),
         ),
         child: Column(

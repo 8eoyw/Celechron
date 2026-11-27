@@ -125,7 +125,8 @@ class _TasksCompanionBody extends StatelessWidget {
                   SectionHeading(
                     '近期考试',
                     color: c.warning,
-                    trailing: Text('14 天内', style: DesktopType.caption(context)),
+                    trailing:
+                        Text('14 天内', style: DesktopType.caption(context)),
                   ),
                   for (final entry in imminentExams.take(3)) ...[
                     _ImminentExamTile(
@@ -252,8 +253,7 @@ class _CompactAgendaTile extends StatelessWidget {
                     period.summary,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        DesktopType.strong(context).copyWith(fontSize: 12.5),
+                    style: DesktopType.strong(context).copyWith(fontSize: 12.5),
                   ),
                   const SizedBox(height: 1),
                   Text(
@@ -372,7 +372,8 @@ class _UpNextBody extends StatelessWidget {
                       compact: true,
                       action: store.isLoggedIn
                           ? DesktopAction(
-                              onTap: () => controller.createTask(context, store),
+                              onTap: () =>
+                                  controller.createTask(context, store),
                               borderColor: c.hairline,
                               borderRadius: DesktopRadius.chip,
                               padding: const EdgeInsets.symmetric(
@@ -416,8 +417,8 @@ class _UpNextBody extends StatelessWidget {
                             SectionHeading(
                               '个人任务',
                               trailing: DesktopAction(
-                                onTap: () => controller.setDestination(
-                                    DesktopDestination.tasks),
+                                onTap: () => controller
+                                    .setDestination(DesktopDestination.tasks),
                                 borderRadius: DesktopRadius.tag,
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
@@ -683,8 +684,8 @@ class _CompanionTodoTile extends StatelessWidget {
                         todo.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            DesktopType.strong(context).copyWith(fontSize: 12.5),
+                        style: DesktopType.strong(context)
+                            .copyWith(fontSize: 12.5),
                       ),
                     ),
                     if (todo.endTime != null) ...[
@@ -751,8 +752,7 @@ class _InspectorBody extends StatelessWidget {
                 onTap: controller.clearInspector,
                 tooltip: '返回待办列表 (Esc)',
                 borderRadius: DesktopRadius.chip,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -786,8 +786,7 @@ class _InspectorBody extends StatelessWidget {
                   store: store,
                   controller: controller,
                 ),
-              PeriodInspectorTarget(period: final p) =>
-                _PeriodInspectorContent(
+              PeriodInspectorTarget(period: final p) => _PeriodInspectorContent(
                   period: p,
                   store: store,
                   controller: controller,
@@ -834,9 +833,8 @@ class _CourseInspectorContent extends StatelessWidget {
     // Join course metadata, hours, homework, exams, and grade across store.
     final sem = store.selectedSemester ??
         (store.semesters.isNotEmpty ? store.semesters.first : null);
-    final courseObj = sem?.courses.values
-        .where((e) => e.name == courseName)
-        .firstOrNull;
+    final courseObj =
+        sem?.courses.values.where((e) => e.name == courseName).firstOrNull;
     final hours = sem == null
         ? null
         : store
@@ -878,7 +876,9 @@ class _CourseInspectorContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(courseName, style: DesktopType.title(context).copyWith(fontSize: 16.5)),
+                  Text(courseName,
+                      style:
+                          DesktopType.title(context).copyWith(fontSize: 16.5)),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
@@ -927,7 +927,8 @@ class _CourseInspectorContent extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '${(hours.done / hours.total * 100).round()}%',
-                      style: DesktopType.mono(context).copyWith(color: swatch.bar),
+                      style:
+                          DesktopType.mono(context).copyWith(color: swatch.bar),
                     ),
                   ],
                 ),
@@ -1014,9 +1015,8 @@ class _CourseInspectorContent extends StatelessWidget {
                   Row(
                     children: [
                       ConcentricTag(
-                        label: entry.exam.type == ExamType.midterm
-                            ? '期中'
-                            : '期末',
+                        label:
+                            entry.exam.type == ExamType.midterm ? '期中' : '期末',
                         foreground: c.warning,
                         background: c.warningFill,
                         radius: DesktopRadius.tag,
@@ -1099,15 +1099,14 @@ class _PeriodInspectorContent extends StatelessWidget {
     final c = DesktopColors.of(context);
     final linkedTask = period.fromUid == null
         ? null
-        : store.fixedTasks
-            .where((t) => t.uid == period.fromUid)
-            .firstOrNull;
+        : store.fixedTasks.where((t) => t.uid == period.fromUid).firstOrNull;
     final mins = period.endTime.difference(period.startTime).inMinutes;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(period.summary, style: DesktopType.title(context).copyWith(fontSize: 16.5)),
+        Text(period.summary,
+            style: DesktopType.title(context).copyWith(fontSize: 16.5)),
         const SizedBox(height: 8),
         _InfoRow(
           icon: Icons.schedule_rounded,
@@ -1179,7 +1178,8 @@ class _TodoInspectorContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(todo.name, style: DesktopType.title(context).copyWith(fontSize: 16.5)),
+        Text(todo.name,
+            style: DesktopType.title(context).copyWith(fontSize: 16.5)),
         const SizedBox(height: 8),
         if (todo.endTime != null) ...[
           Row(
@@ -1406,12 +1406,12 @@ class _ExamInspectorContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        Text(exam.name, style: DesktopType.title(context).copyWith(fontSize: 16.5)),
+        Text(exam.name,
+            style: DesktopType.title(context).copyWith(fontSize: 16.5)),
         const SizedBox(height: 10),
         _InfoRow(
           icon: Icons.schedule_rounded,
-          text:
-              '${fmtDate(entry.start)} · ${fmtRange(entry.start, entry.end)}',
+          text: '${fmtDate(entry.start)} · ${fmtRange(entry.start, entry.end)}',
           numeric: true,
         ),
         if ((exam.location ?? '').isNotEmpty)
@@ -1422,7 +1422,8 @@ class _ExamInspectorContent extends StatelessWidget {
             text: '座位号 ${exam.seat}',
             numeric: true,
           ),
-        _InfoRow(icon: Icons.calendar_today_outlined, text: entry.semester.name),
+        _InfoRow(
+            icon: Icons.calendar_today_outlined, text: entry.semester.name),
         const SizedBox(height: 16),
         DesktopAction(
           onTap: () => controller.inspect(CourseInspectorTarget(exam.name)),

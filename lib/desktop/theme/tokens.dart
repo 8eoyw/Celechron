@@ -12,7 +12,8 @@ abstract final class DesktopRadius {
   static const double input = 8;
   static const double badge = 6;
   static const double tag = 4;
-  static const double pill = 999; // Reserved strictly for wide horizontal pills.
+  static const double pill =
+      999; // Reserved strictly for wide horizontal pills.
 }
 
 abstract final class DesktopFonts {
@@ -263,39 +264,39 @@ abstract final class DesktopType {
         fontFeatures: numeric ? tabular : null,
       );
 
-  static TextStyle display(BuildContext context, {bool numeric = true}) => _base(
-      context, 28, FontWeight.w500, DesktopColors.of(context).text1,
-      height: 1.2, letterSpacing: -0.4, numeric: numeric);
+  static TextStyle display(BuildContext context, {bool numeric = true}) =>
+      _base(context, 28, FontWeight.w500, DesktopColors.of(context).text1,
+          height: 1.2, letterSpacing: -0.4, numeric: numeric);
 
-  static TextStyle title(BuildContext context) => _base(
-      context, 19, FontWeight.w500, DesktopColors.of(context).text1,
-      height: 1.25, letterSpacing: -0.2);
+  static TextStyle title(BuildContext context) =>
+      _base(context, 19, FontWeight.w500, DesktopColors.of(context).text1,
+          height: 1.25, letterSpacing: -0.2);
 
-  static TextStyle section(BuildContext context) => _base(
-      context, 14, FontWeight.w600, DesktopColors.of(context).text1,
-      height: 1.35);
+  static TextStyle section(BuildContext context) =>
+      _base(context, 14, FontWeight.w600, DesktopColors.of(context).text1,
+          height: 1.35);
 
-  static TextStyle body(BuildContext context, {bool numeric = false}) => _base(
-      context, 13.5, FontWeight.w400, DesktopColors.of(context).text1,
-      height: 1.4, numeric: numeric);
+  static TextStyle body(BuildContext context, {bool numeric = false}) =>
+      _base(context, 13.5, FontWeight.w400, DesktopColors.of(context).text1,
+          height: 1.4, numeric: numeric);
 
   static TextStyle strong(BuildContext context, {bool numeric = false}) =>
       _base(context, 13.5, FontWeight.w600, DesktopColors.of(context).text1,
           height: 1.35, numeric: numeric);
 
-  static TextStyle meta(BuildContext context, {bool numeric = false}) => _base(
-      context, 12, FontWeight.w400, DesktopColors.of(context).text2,
-      height: 1.35, numeric: numeric);
+  static TextStyle meta(BuildContext context, {bool numeric = false}) =>
+      _base(context, 12, FontWeight.w400, DesktopColors.of(context).text2,
+          height: 1.35, numeric: numeric);
 
   static TextStyle caption(BuildContext context, {bool numeric = false}) =>
       _base(context, 11.5, FontWeight.w500, DesktopColors.of(context).text3,
           height: 1.3, numeric: numeric);
 
-  static TextStyle label(BuildContext context) => _base(
-      context, 11.5, FontWeight.w600, DesktopColors.of(context).text2,
-      height: 1.25, letterSpacing: 0.25);
+  static TextStyle label(BuildContext context) =>
+      _base(context, 11.5, FontWeight.w600, DesktopColors.of(context).text2,
+          height: 1.25, letterSpacing: 0.25);
 
-  static TextStyle mono(BuildContext context, {double size = 12}) => _base(
-      context, size, FontWeight.w500, DesktopColors.of(context).text2,
-      height: 1.25, numeric: true);
+  static TextStyle mono(BuildContext context, {double size = 12}) =>
+      _base(context, size, FontWeight.w500, DesktopColors.of(context).text2,
+          height: 1.25, numeric: true);
 }

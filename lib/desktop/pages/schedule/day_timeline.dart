@@ -61,9 +61,8 @@ class _ScheduleDayTimelineState extends State<ScheduleDayTimeline> {
       if (upcoming.isNotEmpty) {
         final p = upcoming.first;
         final wait = p.startTime.difference(now).inMinutes;
-        final waitStr = wait >= 60
-            ? '${wait ~/ 60} 小时 ${wait % 60} 分钟后'
-            : '$wait 分钟后';
+        final waitStr =
+            wait >= 60 ? '${wait ~/ 60} 小时 ${wait % 60} 分钟后' : '$wait 分钟后';
         return '下一节 · ${p.summary} · ${fmtTime(p.startTime)}（$waitStr）';
       }
       return '今日课程已结束';
@@ -71,8 +70,8 @@ class _ScheduleDayTimelineState extends State<ScheduleDayTimeline> {
     return '共 ${periods.length} 项安排 · 首节 ${fmtTime(periods.first.startTime)}';
   }
 
-  void _ensureInitialScroll(TimeGridMetrics metrics, List<Period> primaryPeriods,
-      bool showingToday) {
+  void _ensureInitialScroll(
+      TimeGridMetrics metrics, List<Period> primaryPeriods, bool showingToday) {
     if (_didInitialScroll) return;
     _didInitialScroll = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,9 +86,10 @@ class _ScheduleDayTimelineState extends State<ScheduleDayTimeline> {
             .where((p) => !p.startTime.isAfter(n) && p.endTime.isAfter(n))
             .toList();
         if (ongoing.isNotEmpty) {
-          final startMin =
-              (ongoing.first.startTime.hour * 60 + ongoing.first.startTime.minute - 25)
-                  .toDouble();
+          final startMin = (ongoing.first.startTime.hour * 60 +
+                  ongoing.first.startTime.minute -
+                  25)
+              .toDouble();
           targetMin = math.min(nowTarget, startMin);
         } else {
           targetMin = nowTarget;
@@ -474,7 +474,8 @@ class _SingleDayColumn extends StatelessWidget {
                   onDoubleTapDown: (details) {
                     if (!store.isLoggedIn) return;
                     final rawMin = metrics.yToMinute(details.localPosition.dy);
-                    final snapped = ((rawMin / 30).round() * 30).clamp(0, 23 * 60);
+                    final snapped =
+                        ((rawMin / 30).round() * 30).clamp(0, 23 * 60);
                     final start = DateTime(
                       day.year,
                       day.month,
@@ -493,7 +494,8 @@ class _SingleDayColumn extends StatelessWidget {
                 ),
               ),
               // 4. Free-gap inline `+ 规划` affordance
-              for (final gap in gaps) _buildGapAffordance(context, gap, laneWidth),
+              for (final gap in gaps)
+                _buildGapAffordance(context, gap, laneWidth),
               // 5. Empty-day gentle centered cue (never hides the proportional grid)
               if (periods.isEmpty)
                 Positioned(
@@ -637,15 +639,14 @@ class _SingleDayColumn extends StatelessWidget {
     final top = metrics.timeToY(p.startTime, day);
     final height = metrics.durationHeight(p.endTime.difference(p.startTime));
     const colGap = 4.0;
-    final cellW =
-        (laneWidth - 8 - colGap * (placed.columnCount - 1)) / placed.columnCount;
+    final cellW = (laneWidth - 8 - colGap * (placed.columnCount - 1)) /
+        placed.columnCount;
     final left = 4.0 + placed.column * (cellW + colGap);
 
     final isSelected = switch (controller.inspector) {
-      PeriodInspectorTarget(period: final sel) =>
-        sel.summary == p.summary &&
-            sel.startTime == p.startTime &&
-            sel.endTime == p.endTime,
+      PeriodInspectorTarget(period: final sel) => sel.summary == p.summary &&
+          sel.startTime == p.startTime &&
+          sel.endTime == p.endTime,
       CourseInspectorTarget(courseName: final name) => name == p.summary,
       _ => false,
     };
@@ -675,8 +676,7 @@ class _SingleDayColumn extends StatelessWidget {
     );
   }
 
-  Widget _buildDeadlineTick(
-      BuildContext context, Todo todo, double colWidth) {
+  Widget _buildDeadlineTick(BuildContext context, Todo todo, double colWidth) {
     final c = DesktopColors.of(context);
     final due = todo.endTime!;
     final rawY = metrics.timeToY(due, day).clamp(4.0, metrics.totalHeight - 18);
@@ -766,7 +766,8 @@ class _TimelinePeriodBlockState extends State<_TimelinePeriodBlock> {
             : CoursePalette.of(context, p.summary);
 
     final isPast = !p.endTime.isAfter(widget.now);
-    final isOngoing = !p.startTime.isAfter(widget.now) && p.endTime.isAfter(widget.now);
+    final isOngoing =
+        !p.startTime.isAfter(widget.now) && p.endTime.isAfter(widget.now);
     final elapsedFraction = isOngoing
         ? (widget.now.difference(p.startTime).inSeconds /
                 math.max(1, p.endTime.difference(p.startTime).inSeconds))
@@ -878,8 +879,8 @@ class _TimelinePeriodBlockState extends State<_TimelinePeriodBlock> {
                                       p.summary,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: DesktopType.strong(context)
-                                          .copyWith(
+                                      style:
+                                          DesktopType.strong(context).copyWith(
                                         fontSize: 12.5,
                                         color: isUser ? c.text1 : swatch.ink,
                                       ),
@@ -947,8 +948,7 @@ class _TimelinePeriodBlockState extends State<_TimelinePeriodBlock> {
                                         style: DesktopType.caption(context,
                                                 numeric: true)
                                             .copyWith(
-                                          color:
-                                              isUser ? c.text2 : swatch.meta,
+                                          color: isUser ? c.text2 : swatch.meta,
                                         ),
                                       ),
                                     ],
@@ -980,15 +980,14 @@ class _TimelinePeriodBlockState extends State<_TimelinePeriodBlock> {
                                       ],
                                     ),
                                   ],
-                                  if (spacious &&
-                                      p.description.isNotEmpty) ...[
+                                  if (spacious && p.description.isNotEmpty) ...[
                                     const SizedBox(height: 4),
                                     Text(
                                       p.description.replaceAll('\n', ' · '),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: DesktopType.caption(context)
-                                          .copyWith(
+                                      style:
+                                          DesktopType.caption(context).copyWith(
                                         color: (isUser ? c.text3 : swatch.meta)
                                             .withValues(alpha: 0.85),
                                       ),

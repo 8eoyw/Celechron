@@ -128,8 +128,7 @@ Future<DesktopStore> setupDemo() async {
       .setMockMethodCallHandler(
           const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
           (call) async => call.method == 'readAll' ? <String, String>{} : null);
-  final temp =
-      await Directory.systemTemp.createTemp('celechron_v4_fixture_');
+  final temp = await Directory.systemTemp.createTemp('celechron_v4_fixture_');
   Hive.init(temp.path);
   final db = Get.put(DatabaseHelper(), tag: 'db');
   await db.init();
@@ -159,8 +158,8 @@ Future<DesktopStore> setupDemo() async {
 }
 
 Future<void> disposeDemo(WidgetTester tester, DesktopStore store) async {
-  await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 250)));
+  await tester
+      .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 250)));
   await tester.pumpWidget(const SizedBox());
   store.dispose();
   await Get.deleteAll(force: true);

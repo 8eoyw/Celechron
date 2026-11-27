@@ -40,7 +40,8 @@ class AcademicsPage extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text('学业', style: DesktopType.title(context).copyWith(fontSize: 17)),
+              Text('学业',
+                  style: DesktopType.title(context).copyWith(fontSize: 17)),
               const SizedBox(width: 12),
               if (store.semesters.isNotEmpty) _SemesterPicker(store: store),
               const Spacer(),
@@ -427,8 +428,8 @@ class _GradesView extends StatelessWidget {
                 children: [
                   // Header row
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 9),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                     decoration: BoxDecoration(
                       color: c.surfaceHigh.withValues(alpha: 0.6),
                       border: Border(bottom: BorderSide(color: c.hairline)),
@@ -437,7 +438,8 @@ class _GradesView extends StatelessWidget {
                       children: [
                         Expanded(
                           flex: 5,
-                          child: Text('课程', style: DesktopType.caption(context)),
+                          child:
+                              Text('课程', style: DesktopType.caption(context)),
                         ),
                         SizedBox(
                           width: 60,
@@ -542,9 +544,7 @@ class _GradeTableRow extends StatelessWidget {
     final high = grade.fivePoint >= 4.5;
     return Container(
       decoration: BoxDecoration(
-        border: showDivider
-            ? Border(top: BorderSide(color: c.hairline))
-            : null,
+        border: showDivider ? Border(top: BorderSide(color: c.hairline)) : null,
       ),
       child: DesktopAction(
         onTap: onTap,
@@ -744,8 +744,8 @@ class _WeeklyLoadChart extends StatelessWidget {
                   children: [
                     Text(
                       weekly[i] > 0 ? '${weekly[i]}' : '',
-                      style: DesktopType.caption(context, numeric: true)
-                          .copyWith(
+                      style:
+                          DesktopType.caption(context, numeric: true).copyWith(
                         fontSize: 10,
                         color: i == currentWeek ? c.primary : c.text3,
                       ),
@@ -775,8 +775,8 @@ class _WeeklyLoadChart extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       '${i + 1}',
-                      style: DesktopType.caption(context, numeric: true)
-                          .copyWith(
+                      style:
+                          DesktopType.caption(context, numeric: true).copyWith(
                         fontSize: 10.5,
                         color: i == currentWeek ? c.primary : c.text3,
                         fontWeight: i == currentWeek
@@ -803,7 +803,8 @@ class _CourseHoursRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = DesktopColors.of(context);
     final swatch = CoursePalette.of(context, course.name);
-    final frac = course.total == 0 ? 0.0 : (course.done / course.total).clamp(0.0, 1.0);
+    final frac =
+        course.total == 0 ? 0.0 : (course.done / course.total).clamp(0.0, 1.0);
 
     return DesktopAction(
       onTap: onTap,

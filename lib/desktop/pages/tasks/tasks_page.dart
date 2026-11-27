@@ -73,7 +73,8 @@ class _TasksPageState extends State<TasksPage> {
           ),
           child: Row(
             children: [
-              Text('任务与作业', style: DesktopType.title(context).copyWith(fontSize: 17)),
+              Text('任务与作业',
+                  style: DesktopType.title(context).copyWith(fontSize: 17)),
               const SizedBox(width: 10),
               Text(
                 '${allTodos.length} 项作业 · ${pendingTasks.length} 项待办',
@@ -102,9 +103,12 @@ class _TasksPageState extends State<TasksPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_awesome_outlined, size: 15, color: c.primary),
+                    Icon(Icons.auto_awesome_outlined,
+                        size: 15, color: c.primary),
                     const SizedBox(width: 5),
-                    Text('自动规划', style: DesktopType.meta(context).copyWith(color: c.text1)),
+                    Text('自动规划',
+                        style:
+                            DesktopType.meta(context).copyWith(color: c.text1)),
                   ],
                 ),
               ),
@@ -641,8 +645,8 @@ class _TaskListRow extends StatelessWidget {
               width: 28,
               height: 28,
               alignment: Alignment.center,
-              child: Icon(Icons.event_repeat_rounded,
-                  size: 17, color: swatch.bar),
+              child:
+                  Icon(Icons.event_repeat_rounded, size: 17, color: swatch.bar),
             ),
           const SizedBox(width: 8),
           Expanded(

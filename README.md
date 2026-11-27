@@ -2,116 +2,113 @@
 
 **浙大课表、成绩、考试、学在浙大作业，在电脑上一个窗口看完。**
 
-这是 [Celechron](https://github.com/Celechron/Celechron) 的非官方桌面版（Windows / macOS）：登录和数据抓取沿用原版，界面为鼠标和大屏重新设计。
+这是 [Celechron](https://github.com/Celechron/Celechron) 的非官方桌面版（Windows / macOS）：登录与数据抓取沿用原版，桌面前端基于 Material 3 与 Google Workspace 信息架构从零重构，严格按真实时间比例排布日程。
 
-**[⬇ 下载](../../releases/latest)** · Windows 10 / 11 64 位 · macOS 10.15+（Intel 与 Apple 芯片）· 免费开源
+**[⬇ 前往最新 Release](../../releases/latest)** · [Windows 安装包 (`.exe`)](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-Setup-x64.exe) · [Windows 便携版 (`.zip`)](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-Windows-x64.zip) · [macOS (`.dmg`)](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-macOS.dmg)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
-  <img src="docs/screenshots/overview.png" alt="总览页">
+  <img src="docs/screenshots/overview.png" alt="日程总览与右侧协作面板">
 </picture>
 
-<sub>截图中的课程、成绩、作业均为虚构的演示数据。</sub>
+<sub>截图中的课程、成绩、考试与作业均为虚构的演示数据。</sub>
 
 ## 下载即用
 
-到 [Releases](../../releases/latest) 下载对应系统的文件，打开后用统一身份认证的学号和密码登录，课表、成绩、考试、作业会自动同步。
+到 [Releases](../../releases/latest) 或点击上方直链下载对应系统的文件，打开后使用统一身份认证（ZJUAM）学号和密码登录，课表、成绩、考试与作业会自动同步。
 
 ### Windows
 
-下载 **`Celechron-Setup-x64.exe`**，双击安装。不需要管理员权限，也不用另装任何运行库。
+下载 **[`Celechron-Setup-x64.exe`](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-Setup-x64.exe)**，双击安装。不需要管理员权限，也不用另装 VC++ 运行库。
 
-> 第一次运行如果弹出「Windows 已保护你的电脑」，点 **更多信息 → 仍要运行**。这是因为程序没有付费的代码签名，不是病毒，源码都在这个仓库里。
+> 第一次运行如果弹出「Windows 已保护你的电脑」，点 **更多信息 → 仍要运行**。这是因为程序没有付费的代码签名，源码全部公开在本仓库。
 >
-> 不想安装？下载 `Celechron-Windows-x64.zip`，**先解压**再运行里面的 `Celechron.exe`（直接在压缩包里双击会打不开）。
+> 不想安装？下载 [`Celechron-Windows-x64.zip`](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-Windows-x64.zip)，**先解压**再运行里面的 `Celechron.exe`（直接在压缩包里双击会打不开）。
 
 ### macOS
 
-下载 **`Celechron-macOS.dmg`**，打开后把 Celechron 拖进「应用程序」文件夹。同一个文件同时支持 Intel 与 Apple 芯片。
+下载 **[`Celechron-macOS.dmg`](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-macOS.dmg)**（或便携包 [`Celechron-macOS.zip`](https://github.com/8eoyw/Celechron/releases/latest/download/Celechron-macOS.zip)），打开后把 Celechron 拖进「应用程序」文件夹。同一个文件同时支持 Intel 与 Apple 芯片。
 
-程序没有 Apple 的付费签名，第一次打开会被系统拦下：
+程序没有 Apple 付费签名，第一次打开会被系统拦下：
 
 1. 双击打开一次，看到「无法打开」的提示后点「完成」；
-2. 打开「系统设置 → 隐私与安全性」，拉到底部，点 Celechron 旁边的 **「仍要打开」**，输入开机密码确认。
+2. 打开「系统设置 → 隐私与安全性」，拉到底部，点 Celechron 旁的 **「仍要打开」**，输入开机密码确认。
 
-如果提示的是「已损坏，无法打开」，打开「终端」执行下面这行命令后再打开即可（作用是去掉系统给下载文件加的隔离标记）：
+如果提示「已损坏，无法打开」，打开「终端」执行下面这行命令去掉隔离标记后再打开即可：
 
 ```bash
 xattr -cr /Applications/Celechron.app
 ```
 
-## 界面一览
+## 界面一览（v4 架构）
 
-### 总览：打开就知道今天要干什么
+桌面端采用极简三工作区导航（**日程 / 任务 / 学业**）＋ **右侧协作面板** ＋ **`Ctrl+K` 全局指令搜索**：
 
-下一节课在哪、今天的时间轴、7 天内要交的作业、明天的安排，都在第一屏。右侧栏列出所有即将到来的考试和倒计时。
+### 日程：严格按时间比例的日 / 周 / 月视图
 
-### 课表：周、月、课时统计三种看法
+- **单日 / 宽屏双日时间轴**：所有课程、考试、自建日程与自动规划块按统一 `px/min` 线性比例渲染，不压缩午休；左侧同步显示钟点与浙大 **1–13 节次刻度**，宽屏（≥1480px）自动并排展开今日＋明日；空闲时段可直接点 `+ 规划` 或双击空白时段新建日程。
+- **跨模块课程详情**：单击任意课程块，右侧协作面板原地切换为「课程详情」，一站汇总教师、学分、本学期课时进度、关联作业与期末考座号。
 
-**周视图**按真实时间排列，撞课的并排显示，节假日和调休日都有标注。
+![课程跨模块详情](docs/screenshots/course-inspector.png)
 
-![课表周视图](docs/screenshots/timetable-week.png)
+- **周视图与月视图**：7 天严格等比例周课表，撞课自动并排，节假日与调休清晰标注；月视图一屏总览整月排课与截止提醒。
 
-**月视图**一屏看完一个月，左侧标教学周，点任意一天跳到那一周。
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/timetable-week-dark.png">
+  <img src="docs/screenshots/timetable-week.png" alt="课表周视图">
+</picture>
 
 ![课表月视图](docs/screenshots/timetable-month.png)
 
-**课时统计**：这学期一共多少节课、上了多少、还剩多少，每门课的进度，以及每周节数的柱状图。节数按学校的节次时间表计算，跨晚饭的长课不会多算。
+### 任务与作业：学在浙大 + 个人任务 + 自动规划
+
+将学在浙大待交作业（按「已逾期 / 24 小时内 / 7 天内 / 之后」分组，支持按课程筛选、右键复制标题与一键跳转网页）、个人截止任务、固定重复日程与 **自动规划** 收敛到同一工作台；停留在此页面时，右侧协作面板自动切换为「今日日程与近期考试」，避免重复展示。
+
+![任务与作业](docs/screenshots/tasks.png)
+
+### 学业：考试、成绩与 16 周课时统计
+
+共享学期切换器，一次覆盖 **考试安排与倒计时**、**GPA 与成绩明细（支持一键隐私隐藏绩点）** 以及 **16 周课量柱状图与各课程课时进度**。
+
+![成绩与绩点](docs/screenshots/grades.png)
 
 ![课时统计](docs/screenshots/class-hours.png)
 
-顶栏可以切换学期，往年的课表随时翻回去看。
-
-### 成绩
-
-各学期绩点（五分制、4.3 制、百分制）、主修绩点、已获学分、单科成绩和绩点走势。绩点可以一键隐藏，在图书馆打开也不怕被看到。
-
-![成绩](docs/screenshots/grades.png)
-
-### 考试
-
-本学期所有考试的时间、地点、类型，右侧按倒计时排列。
-
-![考试](docs/screenshots/exams.png)
-
-### 作业与任务
-
-- **作业**：直接拉取学在浙大的待交作业，按「24 小时内 / 7 天内 / 之后」分组，常驻在右侧栏，可以收起。
-- **任务**：自己添加 DDL 和日程，自动排出学习时间；右键可以标记完成或删除。
-
-### 深色模式
-
-跟随系统，也可以在设置里手动切换。
-
-![深色模式](docs/screenshots/timetable-week-dark.png)
+![考试安排](docs/screenshots/exams.png)
 
 ### 键盘与鼠标
 
 | 操作 | 快捷键 |
 |---|---|
-| 切换页面（总览 / 课表 / 成绩 / 考试 / 任务 / 设置） | `Ctrl` + `1` ~ `6`（macOS 为 `⌘` + `1` ~ `6`） |
-| 刷新数据 | `F5` 或 `Ctrl` + `R`（macOS 为 `⌘` + `R`） |
-| 查看课程 / 考试详情 | 单击 |
-| 任务操作菜单 | 右键 |
+| 全局搜索与命令面板（课程 / 作业 / 考试 / 任务 / 操作） | `Ctrl` + `K`（macOS 为 `⌘` + `K`） |
+| 展开 / 收起右侧协作面板 | `Ctrl` + `\`（macOS 为 `⌘` + `\`） |
+| 切换工作区（日程 / 任务 / 学业） | `Ctrl` + `1` ~ `3`（macOS 为 `⌘` + `1` ~ `3`） |
+| 回到今天 | `T` |
+| 新建任务或固定日程 | `N` |
+| 立即同步数据 | `Ctrl` + `R`（macOS 为 `⌘` + `R`） |
+| 返回待办 / 关闭弹窗 | `Esc` |
+| 查看课程或项目详情 | 单击 |
+| 在空白时段快速添加日程 | 双击时间轴空白处 |
+| 作业 / 任务操作菜单 | 右键 |
 
 ## 安全与隐私
 
-- 账号密码**只保存在你自己的电脑上**（Windows 的加密存储 / macOS 钥匙串），登录时只发送给学校的统一身份认证。
-- 除了学校的系统，程序只访问 Celechron 官方服务器，用来获取校历配置和检查更新，不上传任何个人信息。
-- 没有任何第三方服务器，作者拿不到你的数据。代码完全开源，可以自己检查或编译。
+- 账号密码**只保存在你自己的电脑上**（Windows 加密存储 / macOS 钥匙串），登录时只发送给学校统一身份认证。
+- 除学校系统外，程序只访问 Celechron 官方配置服务获取校历与版本信息，不上传任何个人信息。
+- 代码完全开源，可自行检查或编译。
 
 ## 和官方 Celechron 的关系
 
-- 本仓库是 [Celechron/Celechron](https://github.com/Celechron/Celechron) 的分支，数据层与官方共用。感谢原作者们的工作！
-- 桌面版是**非官方**版本，有问题请在[本仓库的 Issues](../../issues) 反馈，不要打扰原作者。
-- 手机上请继续用官方的 iOS / Android 版。
-- 课表因教务网限频（921）变空的修复已经提交给官方：[Celechron#186](https://github.com/Celechron/Celechron/pull/186)。
+- 本仓库是 [Celechron/Celechron](https://github.com/Celechron/Celechron) 的分支，数据层与官方共用，感谢原作者们的工作。
+- 桌面版是**非官方**版本，问题请在[本仓库 Issues](../../issues) 反馈，不要打扰原作者。
+- 手机端请继续使用官方 iOS / Android 版。
+- 课表因教务网限频（921）变空的修复已提交给官方：[Celechron#186](https://github.com/Celechron/Celechron/pull/186)。
 
 ## 已知限制
 
-- 只在本科生账号上测试过，研究生账号未测试，欢迎反馈。
-- 「同步到系统日历」在桌面版上不可用。
-- macOS 版已在 macOS 26（Apple 芯片）上实测可用，Intel 芯片的 Mac 尚未实测，欢迎反馈。
+- 主要在本科生账号上测试，研究生账号尚未完整测试，欢迎反馈。
+- 「同步到系统日历」在桌面版不可用。
+- macOS 版在 Apple 芯片实测可用，Intel 芯片 Mac 欢迎反馈。
 - 暂无自动更新，新版本发布在 [Releases](../../releases)。
 
 <details>
@@ -127,7 +124,7 @@ flutter pub get
 flutter build windows --release -t lib/main_desktop.dart
 ```
 
-产物在 `build/windows/x64/runner/Release/`，VC++ 运行库会自动一起复制进去，整个文件夹拷到别的电脑就能运行。
+产物在 `build/windows/x64/runner/Release/`，VC++ 运行库会一并打包进去，整个文件夹拷到其他电脑即可运行。
 
 macOS 需要 Xcode 与 CocoaPods：
 
@@ -140,13 +137,14 @@ flutter build macos --release -t lib/main_desktop.dart
 Windows 打安装包需要 [Inno Setup 6](https://jrsoftware.org/isinfo.php)：
 
 ```bash
-ISCC.exe /DAppVersion=1.3.1-desktop.2 windows/installer/celechron.iss
+ISCC.exe /DAppVersion=1.3.1-desktop.3 windows/installer/celechron.iss
 ```
 
 代码结构：
 
-- 桌面界面在 `lib/desktop/`，设计说明见 `lib/desktop/DESIGN.md`
+- 桌面界面在 `lib/desktop/`
 - 离屏布局检查：`flutter test test_desktop/layout_probe_test.dart`
+- 比例时间轴验证：`flutter test test_desktop/today_timeline_test.dart`
 - 用虚构数据生成 README 截图：`flutter test test_desktop/showcase_test.dart`
 
 </details>

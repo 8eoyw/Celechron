@@ -87,8 +87,8 @@ class SchedulePage extends StatelessWidget {
                   _rangeLabel(focused, mode, twoDay),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: DesktopType.title(context)
-                      .copyWith(fontSize: 16.5, fontFeatures: DesktopType.tabular),
+                  style: DesktopType.title(context).copyWith(
+                      fontSize: 16.5, fontFeatures: DesktopType.tabular),
                 ),
               ),
               if (weekNo != null) ...[
